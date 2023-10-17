@@ -2,7 +2,7 @@
 # OMNeT++/OMNEST Makefile for swim
 #
 # This file was generated with the command:
-#  opp_makemake -f --deep -o swim -I. -Imodel/pladaptMock -I../../queueinglib -L../libs -L../../queueinglib/ -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread
+#  opp_makemake -f --deep -o swim -I. -Imodel/pladaptMock -I../../queueinglib -I/usr/include/python3.10 -L../libs -L../../queueinglib/ -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lpython3.10
 #
 
 # Name of target to be created (-o option)
@@ -16,13 +16,13 @@ USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(TKENV_LIBS) $(QTENV_LIBS) $(CMDENV_LI
 #USERIF_LIBS = $(QTENV_LIBS)
 
 # C++ include paths (with -I)
-INCLUDE_PATH = -I. -Imodel/pladaptMock -I../../queueinglib
+INCLUDE_PATH = -I. -Imodel/pladaptMock -I../../queueinglib -I/usr/include/python3.10
 
 # Additional object and library files to link with
 EXTRA_OBJS =
 
 # Additional libraries (-L, -l options)
-LIBS = $(LDFLAG_LIBPATH)../libs $(LDFLAG_LIBPATH)../../queueinglib/  -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread
+LIBS = $(LDFLAG_LIBPATH)../libs $(LDFLAG_LIBPATH)../../queueinglib/  -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lpython3.10
 
 # Output directory
 PROJECT_OUTPUT_DIR = ../out
@@ -32,6 +32,7 @@ O = $(PROJECT_OUTPUT_DIR)/$(CONFIGNAME)/$(PROJECTRELATIVE_PATH)
 # Object files for local .cc, .msg and .sm files
 OBJS = \
     $O/externalControl/AdaptInterface.o \
+    $O/externalControl/HTTPInterface.o \
     $O/managers/adaptation/BaseAdaptationManager.o \
     $O/managers/adaptation/ReactiveAdaptationManager.o \
     $O/managers/adaptation/ReactiveAdaptationManager2.o \
@@ -66,11 +67,13 @@ OBJS = \
     $O/util/ServerUtilization.o \
     $O/util/TimeWindowStats.o \
     $O/util/Utils.o \
-    $O/managers/execution/BootComplete_m.o
+    $O/managers/execution/BootComplete_m.o \
+    $O/managers/execution/RemoveComplete_m.o
 
 # Message files
 MSGFILES = \
-    managers/execution/BootComplete.msg
+    managers/execution/BootComplete.msg \
+    managers/execution/RemoveComplete.msg
 
 # SM files
 SMFILES =
