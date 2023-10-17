@@ -20,7 +20,7 @@ import org.omnetpp.queueing.Router;
 import org.omnetpp.queueing.Source;
 import org.omnetpp.queueing.Sink;
 import org.omnetpp.queueing.SourceOnce;
-import plasa.externalControl.AdaptInterface;
+import plasa.externalControl.HTTPInterface;
 import plasa.managers.monitor.SimProbe;
 import plasa.managers.monitor.SimpleMonitor;
 import plasa.modules.AppServer;
@@ -65,7 +65,7 @@ network SWIM
         sinkLow: Sink {
             @display("p=522,142");
         }
-        adaptInterface: AdaptInterface {
+        HTTPInterface: HTTPInterface {
             @display("p=440,32");
         }
         model: Model {
@@ -85,6 +85,6 @@ network SWIM
         source.out --> arrivalMonitor.in;
         classifier.out++ --> sink.in++;
         classifier.rest --> sinkLow.in++;
-        probe.out++ --> adaptInterface.probe;
+        probe.out++ --> HTTPInterface.probe;
         probe.out++ --> monitor.probe;
 }
