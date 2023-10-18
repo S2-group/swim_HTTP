@@ -35,27 +35,27 @@ public:
     virtual ~HTTPInterface();
 
 protected:
-    std::map<std::string, std::function<std::string(const std::vector<std::string>&)>> commandHandlers;
+    std::map<std::string, std::function<std::string(const std::string&)>> commandHandlers;
     Model* pModel;
     IProbe* pProbe;
 
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 
-    virtual std::string cmdAddServer(const std::vector<std::string>& args);
-    virtual std::string cmdRemoveServer(const std::vector<std::string>& args);
-    virtual std::string cmdSetDimmer(const std::vector<std::string>& args);
+    virtual std::string cmdAddServer(const std::string& arg);
+    virtual std::string cmdRemoveServer(const std::string& arg);
+    virtual std::string cmdSetDimmer(const std::string& arg);
 
-    virtual std::string cmdGetDimmer(const std::vector<std::string>& args);
-    virtual std::string cmdGetServers(const std::vector<std::string>& args);
-    virtual std::string cmdGetActiveServers(const std::vector<std::string>& args);
-    virtual std::string cmdGetMaxServers(const std::vector<std::string>& args);
-    virtual std::string cmdGetUtilization(const std::vector<std::string>& args);
-    virtual std::string cmdGetBasicResponseTime(const std::vector<std::string>& args);
-    virtual std::string cmdGetBasicThroughput(const std::vector<std::string>& args);
-    virtual std::string cmdGetOptResponseTime(const std::vector<std::string>& args);
-    virtual std::string cmdGetOptThroughput(const std::vector<std::string>& args);
-    virtual std::string cmdGetArrivalRate(const std::vector<std::string>& args);
+    virtual std::string cmdGetDimmer(const std::string& arg);
+    virtual std::string cmdGetServers(const std::string& arg);
+    virtual std::string cmdGetActiveServers(const std::string& arg);
+    virtual std::string cmdGetMaxServers(const std::string& arg);
+    virtual std::string cmdGetUtilization(const std::string& arg);
+    virtual std::string cmdGetBasicResponseTime(const std::string& arg);
+    virtual std::string cmdGetBasicThroughput(const std::string& arg);
+    virtual std::string cmdGetOptResponseTime(const std::string& arg);
+    virtual std::string cmdGetOptThroughput(const std::string& arg);
+    virtual std::string cmdGetArrivalRate(const std::string& arg);
 
 private:
     static const unsigned BUFFER_SIZE = 4000;
