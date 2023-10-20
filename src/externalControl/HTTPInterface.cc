@@ -17,6 +17,8 @@
 #include <map>
 #include <sstream>
 #include <boost/tokenizer.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <managers/execution/ExecutionManagerMod.h>
 #include "HttpMsg_m.h"
 
@@ -32,10 +34,9 @@ namespace {
 }
 
 HTTPInterface::HTTPInterface() {
-    commandHandlers["/add_server"] = std::bind(&HTTPInterface::cmdAddServer, this, std::placeholders::_1);
-    commandHandlers["/remove_server"] = std::bind(&HTTPInterface::cmdRemoveServer, this, std::placeholders::_1);
-    commandHandlers["/set_dimmer"] = std::bind(&HTTPInterface::cmdSetDimmer, this, std::placeholders::_1);
-
+    // put commands
+    commandHandlers["server"] = std::bind(&HTTPInterface::cmdSetServer, this, std::placeholders::_1);
+    commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdSetDimmer, this, std::placeholders::_1);
 
     // get commands
     commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
@@ -98,37 +99,51 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         // Handle the case where there are no words
         status_code = "400 Bad Request";
     } else if (words[0] == "GET") {
-        response_body += "{";
+        boost::property_tree::ptree temp_json;
+
         response_type = "application/json";
 
         if (words[1] == "/monitor") {
             for (const std::string& monitorable : monitor) {
-                std::string value = commandHandlers[monitorable](std::string());
-                response_body += "\"" + monitorable + "\": " + value;
-
-                if (monitorable != monitor.back()) {
-                    response_body += ", ";
-                } else {
-                    response_body += "}";
-                }
+                // Add key-value pairs to the JSON object
+                temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
             }
         } else if (words[1] == "/monitor_schema") {
-            // Handle /monitor_schema
+            boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
         } else if (words[1] == "/adaptation_schema") {
-            // Handle /adaptation_schema
+            boost::property_tree::read_json("specification/execute_schema.json", temp_json);
         } else {
             status_code = "404 Not Found";
             response_body = "";
         }
+
+        // Get the JSON string if the request is valid
+        if (status_code == "200 OK") {
+            std::ostringstream oss;
+            boost::property_tree::write_json(oss, temp_json);
+            response_body = oss.str();
+        }
+
     } else if (words[0] == "PUT") {
         response_type = "text/plain";
 
-        bool found = std::find(adaptations.begin(), adaptations.end(), words[1]) != adaptations.end();
-        if (found) {
-            std::string arg = lines.back();
-            std::cout << arg << endl;
+        if (words[1] == "/execute") {
+            std::string request_body = lines.back();
 
-            response_body = commandHandlers[words[1]](arg);
+            std::cout << request_body << endl;
+
+            std::istringstream json_stream(request_body);
+            boost::property_tree::ptree json_request;
+            boost::property_tree::read_json(json_stream, json_request);
+
+            boost::property_tree::ptree::const_iterator first_entry = json_request.begin();
+            std::string first_key = first_entry->first;
+
+            std::cout << first_key << endl;
+
+            std::string arg = json_request.get<std::string>(first_key);
+
+            response_body = commandHandlers[first_key](arg);
         } else {
             status_code = "404 Not Found";
         }
@@ -147,6 +162,16 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
     // Send the HTTP response
     rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+}
+
+std::string HTTPInterface::cmdSetServer(const std::string& arg) {
+    if (arg == "Add") {
+        return HTTPInterface::cmdAddServer(arg);
+    } else if (arg == "Remove") {
+        return HTTPInterface::cmdRemoveServer(arg);
+    } else {
+        return "\"error: invalid server argument\"";
+    }
 }
 
 std::string HTTPInterface::cmdAddServer(const std::string& arg) {

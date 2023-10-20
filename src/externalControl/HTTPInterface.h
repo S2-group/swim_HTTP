@@ -42,6 +42,7 @@ protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 
+    virtual std::string cmdSetServer(const std::string& arg);
     virtual std::string cmdAddServer(const std::string& arg);
     virtual std::string cmdRemoveServer(const std::string& arg);
     virtual std::string cmdSetDimmer(const std::string& arg);
@@ -79,11 +80,9 @@ private:
     };
 
     std::vector<std::string> adaptations = {
-      "/add_server",
-      "/remove_server",
-      "/set_dimmer"
+      "server",
+      "dimmer"
     };
-
 };
 
 #endif
