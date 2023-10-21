@@ -9,8 +9,8 @@ RUN apt update && apt install -y --no-install-recommends build-essential gcc g++
 RUN wget --header="Accept: text/html" \
          --referer="https://omnetpp.org" \
          --output-document=omnetpp-5.4.1-src-linux.tgz \
-         https://ipfs.omnetpp.org/release/5.4.1/omnetpp-5.4.1-src-linux.tgz
-
+         https://github.com/omnetpp/omnetpp/releases/download/omnetpp-5.4.1/omnetpp-5.4.1-src-linux.tgz
+         
 RUN tar --directory=/opt -xzf omnetpp-5.4.1-src-linux.tgz && rm omnetpp-5.4.1-src-linux.tgz
 
 WORKDIR /opt/omnetpp-5.4.1

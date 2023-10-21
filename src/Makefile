@@ -16,13 +16,13 @@ USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(TKENV_LIBS) $(QTENV_LIBS) $(CMDENV_LI
 #USERIF_LIBS = $(QTENV_LIBS)
 
 # C++ include paths (with -I)
-INCLUDE_PATH = -I. -Imodel/pladaptMock -I../../queueinglib -I/usr/include/python3.10
+INCLUDE_PATH = -I. -Imodel/pladaptMock -I../../queueinglib
 
 # Additional object and library files to link with
 EXTRA_OBJS =
 
 # Additional libraries (-L, -l options)
-LIBS = $(LDFLAG_LIBPATH)../libs $(LDFLAG_LIBPATH)../../queueinglib/  -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread -lpython3.10
+LIBS = $(LDFLAG_LIBPATH)../libs $(LDFLAG_LIBPATH)../../queueinglib/  -lqueueinglib -lboost_serialization -lboost_system -lboost_filesystem -lpthread
 
 # Output directory
 PROJECT_OUTPUT_DIR = ../out
