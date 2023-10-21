@@ -1,4 +1,4 @@
-FROM gabrielmoreno/omnetpp-vnc:5.4.1
+FROM egalberts/omnetpp-vnc:5.4.1
 LABEL Description="Docker image for SWIM"
 
 USER root
@@ -8,19 +8,19 @@ ENV BASE_DIR=${HOME}/seams-swim
 
 WORKDIR ${BASE_DIR}
 
-RUN git clone https://github.com/S2-group/swim_HTTP.git
+RUN git clone -b dockerrr https://github.com/S2-group/swim_HTTP.git
 
-RUN tar xzf swim/queueinglib.tgz
+RUN tar xzf swim_HTTP/queueinglib.tgz
 
 WORKDIR ${BASE_DIR}/queueinglib
 
 RUN make -j$(nproc)
 
-WORKDIR ${BASE_DIR}/swim
+WORKDIR ${BASE_DIR}/swim_HTTP
 
 RUN make cleanall && make makefiles && make -j$(nproc)
 
-WORKDIR ${BASE_DIR}/swim/examples/simple_am
+WORKDIR ${BASE_DIR}/swim_HTTP/examples/simple_am
 
 RUN make -j$(nproc)
 

@@ -23,7 +23,6 @@
 #include <map>
 #include "model/Model.h"
 #include "managers/monitor/IProbe.h"
-#include "QueueBase.h"
 
 /**
  * Adaptation interface (probes and effectors)
