@@ -20,7 +20,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <managers/execution/ExecutionManagerMod.h>
-#include "HttpMsg_m.h"
 
 Define_Module(HTTPInterface);
 
