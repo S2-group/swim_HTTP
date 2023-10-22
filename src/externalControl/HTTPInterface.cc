@@ -34,8 +34,8 @@ namespace {
 
 HTTPInterface::HTTPInterface() {
     // put commands
-    commandHandlers["server"] = std::bind(&HTTPInterface::cmdSetServer, this, std::placeholders::_1);
-    commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdSetDimmer, this, std::placeholders::_1);
+    commandHandlers["set_server"] = std::bind(&HTTPInterface::cmdSetServer, this, std::placeholders::_1);
+    commandHandlers["set_dimmer"] = std::bind(&HTTPInterface::cmdSetDimmer, this, std::placeholders::_1);
 
     // get commands
     commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
