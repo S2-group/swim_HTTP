@@ -2,3 +2,5 @@
 /.computed/
 /out/
 /gcc-debug/
+/.idea/
+*.iml
