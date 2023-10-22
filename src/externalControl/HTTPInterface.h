@@ -1,4 +1,4 @@
-/*******************************************************************************
+_/*******************************************************************************
  * Simulator of Web Infrastructure and Management
  * Copyright (c) 2016 Carnegie Mellon University.
  * All Rights Reserved.
@@ -79,8 +79,8 @@ private:
     };
 
     std::vector<std::string> adaptations = {
-      "server",
-      "dimmer"
+      "set_server",
+      "set_dimmer"
     };
 };
 
