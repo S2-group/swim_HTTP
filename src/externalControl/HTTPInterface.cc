@@ -129,17 +129,12 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         if (words[1] == "/execute") {
             std::string request_body = lines.back();
 
-            std::cout << request_body << endl;
-
             std::istringstream json_stream(request_body);
             boost::property_tree::ptree json_request;
             boost::property_tree::read_json(json_stream, json_request);
 
             boost::property_tree::ptree::const_iterator first_entry = json_request.begin();
             std::string first_key = first_entry->first;
-
-            std::cout << first_key << endl;
-
             std::string arg = json_request.get<std::string>(first_key);
 
             response_body = commandHandlers[first_key](arg);
