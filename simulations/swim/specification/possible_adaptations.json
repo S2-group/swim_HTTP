@@ -1,0 +1,50 @@
+{
+  "schema": {
+    "type": "object",
+    "properties": {
+      "server_number": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "integer",
+              "example": 10
+            }
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "dimmer": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "number",
+            "format": "float"
+          },
+          "stop": {
+            "type": "number",
+            "format": "float"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "values": {
+    "server_number": {
+      "values":[1, 2, 3],
+      "type": "discrete"
+    },
+    "dimmer": {
+      "start": 0.0,
+      "stop": 1.0,
+      "type": "continuous"
+    }
+  }
+}

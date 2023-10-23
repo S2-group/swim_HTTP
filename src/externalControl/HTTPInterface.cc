@@ -111,6 +111,8 @@ void HTTPInterface::handleMessage(cMessage *msg) {
             boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
         } else if (words[1] == "/adaptation_schema") {
             boost::property_tree::read_json("specification/execute_schema.json", temp_json);
+        } else if (words[1] == "/possible_adaptations") {
+            boost::property_tree::read_json("specification/possible_adaptations.json", temp_json);
         } else {
             status_code = "404 Not Found";
             response_body = "";

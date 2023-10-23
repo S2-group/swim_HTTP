@@ -1,10 +1,10 @@
 {
-    "set_server": {
-        "descriptions": "Add or remove a server at runtime.",
-        "type": "text",
-        "format": "string"
+    "server_number": {
+        "descriptions": "Sets the number of servers.",
+        "type": "number",
+        "format": "integer"
     },
-     "set_dimmer": {
+     "dimmer": {
         "description": "Set the proportion of requests served with optional content (number between 0 and 1).",
         "type": "number",
         "format": "float"
