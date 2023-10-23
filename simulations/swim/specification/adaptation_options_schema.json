@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "properties": {
+    "server_number": {
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "format": "integer",
+            "example": 10
+          }
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    },
+    "dimmer_factor": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "number",
+          "format": "float"
+        },
+        "stop": {
+          "type": "number",
+          "format": "float"
+        },
+        "type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

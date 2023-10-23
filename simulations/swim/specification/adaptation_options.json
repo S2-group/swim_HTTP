@@ -1,0 +1,11 @@
+{
+  "server_number": {
+    "values":[1, 2, 3],
+    "type": "discrete"
+  },
+  "dimmer_ratio": {
+    "start": 0.0,
+    "stop": 1.0,
+    "type": "continuous"
+  }
+}
