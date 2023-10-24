@@ -126,8 +126,6 @@ void HTTPInterface::handleMessage(cMessage *msg) {
                 dimmer_request = json_request.get<std::string>("dimmer_factor");
 
                 if (servers_now != servers_request) {
-                    std::cout << servers_now << endl;
-                    std::cout << servers_request << endl;
                     server_request_status = HTTPInterface::cmdSetServers(servers_request);
                 } else {
                     server_request_status = "Number of servers already satisfied";
