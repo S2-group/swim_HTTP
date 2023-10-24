@@ -15,11 +15,13 @@
 #include "HTTPInterface.h"
 #include <string>
 #include <map>
+#include <cmath>
 #include <sstream>
 #include <boost/tokenizer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <managers/execution/ExecutionManagerMod.h>
+#include "HttpMsg_m.h"
 
 Define_Module(HTTPInterface);
 
@@ -33,10 +35,6 @@ namespace {
 }
 
 HTTPInterface::HTTPInterface() {
-    // put commands
-    commandHandlers["set_server"] = std::bind(&HTTPInterface::cmdSetServer, this, std::placeholders::_1);
-    commandHandlers["set_dimmer"] = std::bind(&HTTPInterface::cmdSetDimmer, this, std::placeholders::_1);
-
     // get commands
     commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
     commandHandlers["servers"] = std::bind(&HTTPInterface::cmdGetServers, this, std::placeholders::_1);
@@ -74,34 +72,26 @@ void HTTPInterface::handleMessage(cMessage *msg) {
     // Get data from the buffer
     std::string input(recvBuffer, numRecvBytes);
     numRecvBytes = 0;
+    // Reset buffer
     char recvBuffer[BUFFER_SIZE];
 
     std::vector<std::string> words;
     std::istringstream iss(input);
-    for (std::string word; iss >> word;) {
-        words.push_back(word);
-    }
+    for (std::string word; iss >> word;) { words.push_back(word); }
 
     std::stringstream ss(input);
     std::vector<std::string> lines;
     std::string line;
-
-    while (std::getline(ss, line, '\n')) {
-        lines.push_back(line);
-    }
+    while (std::getline(ss, line, '\n')) { lines.push_back(line); }
 
     std::string response_body = "";
     std::string status_code = "200 OK";
-    std::string response_type;
+    boost::property_tree::ptree temp_json;
 
     if (words.empty()) {
         // Handle the case where there are no words
         status_code = "400 Bad Request";
     } else if (words[0] == "GET") {
-        boost::property_tree::ptree temp_json;
-
-        response_type = "application/json";
-
         if (words[1] == "/monitor") {
             for (const std::string& monitorable : monitor) {
                 // Add key-value pairs to the JSON object
@@ -111,23 +101,10 @@ void HTTPInterface::handleMessage(cMessage *msg) {
             boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
         } else if (words[1] == "/adaptation_schema") {
             boost::property_tree::read_json("specification/execute_schema.json", temp_json);
-        } else if (words[1] == "/possible_adaptations") {
-            boost::property_tree::read_json("specification/possible_adaptations.json", temp_json);
         } else {
             status_code = "404 Not Found";
-            response_body = "";
         }
-
-        // Get the JSON string if the request is valid
-        if (status_code == "200 OK") {
-            std::ostringstream oss;
-            boost::property_tree::write_json(oss, temp_json);
-            response_body = oss.str();
-        }
-
     } else if (words[0] == "PUT") {
-        response_type = "text/plain";
-
         if (words[1] == "/execute") {
             std::string request_body = lines.back();
 
@@ -135,11 +112,35 @@ void HTTPInterface::handleMessage(cMessage *msg) {
             boost::property_tree::ptree json_request;
             boost::property_tree::read_json(json_stream, json_request);
 
-            boost::property_tree::ptree::const_iterator first_entry = json_request.begin();
-            std::string first_key = first_entry->first;
-            std::string arg = json_request.get<std::string>(first_key);
+            std::string servers_now, dimmer_now;
+            servers_now = HTTPInterface::cmdGetServers(std::string());
+            dimmer_now = HTTPInterface::cmdGetDimmer(std::string());
 
-            response_body = commandHandlers[first_key](arg);
+            try {
+                std::string servers_request, dimmer_request, server_request_status, dimmer_request_status;
+                servers_request = json_request.get<std::string>("server_number");
+                dimmer_request = json_request.get<std::string>("dimmer_factor");
+
+                if (servers_now != servers_request) {
+                    std::cout << servers_now << endl;
+                    std::cout << servers_request << endl;
+                    server_request_status = HTTPInterface::cmdSetServers(servers_request);
+                } else {
+                    server_request_status = "Number of servers already satisfied";
+                }
+
+                if (dimmer_now != dimmer_request) {
+                    dimmer_request_status = HTTPInterface::cmdSetDimmer(dimmer_request);
+                } else {
+                    dimmer_request_status = "Dimmer factor already satisfied";
+                }
+
+                temp_json.put("server_number", server_request_status);
+                temp_json.put("dimmer_factor", dimmer_request_status);
+            } catch (boost::property_tree::ptree_bad_path& e) {
+                status_code = "400 Bad Request"; 
+                temp_json.put("error", std::string("Missing key in request: ") + e.what());
+            }
         } else {
             status_code = "404 Not Found";
         }
@@ -147,10 +148,17 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         status_code = "405 Method Not Allowed";
     }
 
+    // Get the JSON string if request is valid
+    if (status_code == "200 OK") {
+        std::ostringstream oss;
+        boost::property_tree::write_json(oss, temp_json);
+        response_body = oss.str();
+    }
+
     // Construct the HTTP response
     std::string http_response = 
         "HTTP/1.1 " + status_code + "\r\n"
-        "Content-Type: " + response_type + "\r\n"
+        "Content-Type: application/json\r\n"
         "Content-Length: " + std::to_string(response_body.length()) + "\r\n"
         "Accept-Ranges: bytes\r\n"
         "Connection: close\r\n"
@@ -160,13 +168,34 @@ void HTTPInterface::handleMessage(cMessage *msg) {
     rtScheduler->sendBytes(http_response.c_str(), http_response.length());
 }
 
-std::string HTTPInterface::cmdSetServer(const std::string& arg) {
-    if (arg == "Add") {
-        return HTTPInterface::cmdAddServer(arg);
-    } else if (arg == "Remove") {
-        return HTTPInterface::cmdRemoveServer(arg);
-    } else {
-        return "\"error: invalid server argument\"";
+std::string HTTPInterface::cmdSetServers(const std::string& arg) {
+    try {
+        int arg_int, val, max, diff;
+        arg_int = std::stoi(arg);
+        val = std::stoi(HTTPInterface::cmdGetServers(""));
+        max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
+        diff = std::abs(arg_int - val);
+
+        if (val > max) {
+            return "ERROR_MAX_SERVERS_EXCEEDED";
+        }
+
+        for (int i = 0; i < diff; ++i) {
+            if (arg_int < val) {
+                std::cout << "BLEEP" << endl;
+                HTTPInterface::cmdRemoveServer(arg);
+            } else if (arg_int > val && arg_int <= max) { 
+                HTTPInterface::cmdAddServer(arg);
+            }
+        }
+
+        return COMMAND_SUCCESS;
+    }
+    catch (const std::invalid_argument& ia) {
+        return "ERROR_INVALID_ARGUMENT";
+    }
+    catch (const std::out_of_range& oor) {
+        return "ERROR_OUT_OF_RANGE";
     }
 }
 

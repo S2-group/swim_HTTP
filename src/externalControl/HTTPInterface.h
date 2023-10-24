@@ -1,4 +1,4 @@
-_/*******************************************************************************
+/*******************************************************************************
  * Simulator of Web Infrastructure and Management
  * Copyright (c) 2016 Carnegie Mellon University.
  * All Rights Reserved.
@@ -23,6 +23,7 @@ _/******************************************************************************
 #include <map>
 #include "model/Model.h"
 #include "managers/monitor/IProbe.h"
+#include "QueueBase.h"
 
 /**
  * Adaptation interface (probes and effectors)
@@ -41,7 +42,7 @@ protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 
-    virtual std::string cmdSetServer(const std::string& arg);
+    virtual std::string cmdSetServers(const std::string& arg);
     virtual std::string cmdAddServer(const std::string& arg);
     virtual std::string cmdRemoveServer(const std::string& arg);
     virtual std::string cmdSetDimmer(const std::string& arg);
@@ -79,8 +80,8 @@ private:
     };
 
     std::vector<std::string> adaptations = {
-      "set_server",
-      "set_dimmer"
+      "server_number",
+      "dimmer_number"
     };
 };
 
