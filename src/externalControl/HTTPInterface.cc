@@ -99,8 +99,12 @@ void HTTPInterface::handleMessage(cMessage *msg) {
             }
         } else if (words[1] == "/monitor_schema") {
             boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
-        } else if (words[1] == "/adaptation_schema") {
+        } else if (words[1] == "/execute_schema") {
             boost::property_tree::read_json("specification/execute_schema.json", temp_json);
+        } else if (words[1] == "/adaptation_options") {
+            boost::property_tree::read_json("specification/adaptation_options.json", temp_json);
+        } else if (words[1] == "/adaptation_options_schema") {
+            boost::property_tree::read_json("specification/adaptation_options_schema.json", temp_json);
         } else {
             status_code = "404 Not Found";
         }
