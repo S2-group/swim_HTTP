@@ -181,7 +181,7 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
         diff = std::abs(arg_int - val);
 
         if (arg_int > max) {
-            return "ERROR_MAX_SERVERS_EXCEEDED";
+            return "error: max servers exceeded";
         }
 
         for (int i = 0; i < diff; ++i) {
@@ -195,10 +195,10 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
         return COMMAND_SUCCESS;
     }
     catch (const std::invalid_argument& ia) {
-        return "ERROR_INVALID_ARGUMENT";
+        return "error: invalid argument";
     }
     catch (const std::out_of_range& oor) {
-        return "ERROR_OUT_OF_RANGE";
+        return "error: out of range";
     }
 }
 
