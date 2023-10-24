@@ -180,7 +180,7 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
         max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
         diff = std::abs(arg_int - val);
 
-        if (val > max) {
+        if (arg_int > max) {
             return "ERROR_MAX_SERVERS_EXCEEDED";
         }
 
