@@ -182,7 +182,6 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
 
         for (int i = 0; i < diff; ++i) {
             if (arg_int < val) {
-                std::cout << "BLEEP" << endl;
                 HTTPInterface::cmdRemoveServer(arg);
             } else if (arg_int > val && arg_int <= max) { 
                 HTTPInterface::cmdAddServer(arg);
