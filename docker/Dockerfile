@@ -8,7 +8,7 @@ ENV BASE_DIR=${HOME}/seams-swim
 
 WORKDIR ${BASE_DIR}
 
-RUN git clone https://github.com/S2-group/swim_HTTP.git
+RUN git clone https://github.com/S2-group/swim_HTTP.git 
 
 RUN tar xzf swim_HTTP/queueinglib.tgz
 
