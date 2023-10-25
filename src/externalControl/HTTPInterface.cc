@@ -30,6 +30,7 @@ namespace {
     const string COMMAND_SUCCESS = "OK\n";
     const string BAD_REQUEST = "400 Bad Request";
     const string MONITOR_SCHEMA_PATH = "specification/monitor_schema.json";
+    const string UNKNOWN_ENDPOINT = "404 Not Found"
 }
 
 HTTPInterface::HTTPInterface() {
@@ -39,7 +40,6 @@ HTTPInterface::HTTPInterface() {
     endpointGETHandlers["/execute_schema"] = std::bind(&HTTPInterface::epExecuteSchema, this, std::placeholders::_1);
     endpointGETHandlers["/adaptation_options"] = std::bind(&HTTPInterface::epAdapOptions, this, std::placeholders::_1);
     endpointGETHandlers["/adaptation_options_schema"] = std::bind(&HTTPInterface::epAdapOptSchema, this, std::placeholders::_1);
-    endpointGETHandlers["/adaptation_options"] = std::bind(&HTTPInterface::epAdaptationOps, this, std::placeholders::_1);
 
     // PUT Request
     endpointPUTHandlers["/execute"] = std::bind(&HTTPInterface::epExecute, this, std::placeholders::_1);
@@ -132,59 +132,11 @@ void HTTPInterface::handleMessage(cMessage *msg) {
     HTTPAPI[http_rq_type][http_rq_endpoint](http_rq_body);
 
 
-            for (const std::string& monitorable : monitor) {
-                // Add key-value pairs to the JSON object
-                temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
-            }
-        } else if (words[1] == "/monitor_schema") {
-            boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
-        } else if (words[1] == "/execute_schema") {
-            boost::property_tree::read_json("specification/execute_schema.json", temp_json);
-        } else if (words[1] == "/adaptation_options") {
-            boost::property_tree::read_json("specification/adaptation_options.json", temp_json);
-        } else if (words[1] == "/adaptation_options_schema") {
-            boost::property_tree::read_json("specification/adaptation_options_schema.json", temp_json);
-        } else {
-            status_code = "404 Not Found";
-        }
-    } else if (words[0] == "PUT") {
-        if (words[1] == "/execute") {
-            std::string request_body = lines.back();
+    std::string uk_rq_resp = HTTPInterface::constructResponse(UNKNOWN,"");
+    rtScheduler->sendBytes(uk_rq_resp.c_str(), uk_rq_resp.length());
+    return;
 
-            std::istringstream json_stream(request_body);
-            boost::property_tree::ptree json_request;
-            boost::property_tree::read_json(json_stream, json_request);
 
-            std::string servers_now, dimmer_now;
-            servers_now = HTTPInterface::cmdGetServers(std::string());
-            dimmer_now = HTTPInterface::cmdGetDimmer(std::string());
-
-            try {
-                std::string servers_request, dimmer_request, server_request_status, dimmer_request_status;
-                servers_request = json_request.get<std::string>("server_number");
-                dimmer_request = json_request.get<std::string>("dimmer_factor");
-
-                if (servers_now != servers_request) {
-                    server_request_status = HTTPInterface::cmdSetServers(servers_request);
-                } else {
-                    server_request_status = "Number of servers already satisfied";
-                }
-
-                if (dimmer_now != dimmer_request) {
-                    dimmer_request_status = HTTPInterface::cmdSetDimmer(dimmer_request);
-                } else {
-                    dimmer_request_status = "Dimmer factor already satisfied";
-                }
-
-                temp_json.put("server_number", server_request_status);
-                temp_json.put("dimmer_factor", dimmer_request_status);
-            } catch (boost::property_tree::ptree_bad_path& e) {
-                status_code = "400 Bad Request"; 
-                temp_json.put("error", std::string("Missing key in request: ") + e.what());
-            }
-        } else {
-            status_code = "404 Not Found";
-        }
     } else {
         status_code = "405 Method Not Allowed";
     }
@@ -202,26 +154,63 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 }
 
 std::string HTTPInterface::epMonitor(const std::string& arg){
-    boost::property_tree::read_json(MONITOR_SCHEMA_PATH, temp_json);
+    for (const std::string& monitorable : monitor) {
+        // Add key-value pairs to the JSON object
+        temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
+    }
+
 
 }
 std::string HTTPInterface::epMonitorSchema(const std::string& arg){
+    boost::property_tree::read_json(MONITOR_SCHEMA_PATH, temp_json);
 
 }
 std::string HTTPInterface::epExecuteSchema(const std::string& arg){
+    boost::property_tree::read_json("specification/execute_schema.json", temp_json);
 
 }
 std::string HTTPInterface::epAdapOptions(const std::string& arg){
-
+    boost::property_tree::read_json("specification/adaptation_options.json", temp_json);
 }
 std::string HTTPInterface::epAdapOptSchema(const std::string& arg)
 {
-    }
-
-std::string HTTPInterface::epAdaptationOps(const std::string& arg){
-
+    boost::property_tree::read_json("specification/adaptation_options_schema.json", temp_json);
 }
+
 std::string HTTPInterface::epExecute(const std::string& arg){
+    std::string request_body = lines.back();
+
+    std::istringstream json_stream(request_body);
+    boost::property_tree::ptree json_request;
+    boost::property_tree::read_json(json_stream, json_request);
+
+    std::string servers_now, dimmer_now;
+    servers_now = HTTPInterface::cmdGetServers(std::string());
+    dimmer_now = HTTPInterface::cmdGetDimmer(std::string());
+
+    try {
+        std::string servers_request, dimmer_request, server_request_status, dimmer_request_status;
+        servers_request = json_request.get<std::string>("server_number");
+        dimmer_request = json_request.get<std::string>("dimmer_factor");
+
+        if (servers_now != servers_request) {
+            server_request_status = HTTPInterface::cmdSetServers(servers_request);
+        } else {
+            server_request_status = "Number of servers already satisfied";
+        }
+
+        if (dimmer_now != dimmer_request) {
+            dimmer_request_status = HTTPInterface::cmdSetDimmer(dimmer_request);
+        } else {
+            dimmer_request_status = "Dimmer factor already satisfied";
+        }
+
+        temp_json.put("server_number", server_request_status);
+        temp_json.put("dimmer_factor", dimmer_request_status);
+    } catch (boost::property_tree::ptree_bad_path& e) {
+        status_code = "400 Bad Request";
+        temp_json.put("error", std::string("Missing key in request: ") + e.what());
+    }
 
 }
 
