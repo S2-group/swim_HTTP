@@ -1,47 +1,45 @@
 {
-    "dimmer": {
+    "type": "object",
+    "properties": {
+      "dimmer": {
         "descriptions": "Proportion of requests served with optional content.",
-        "type": "number",
-        "format": "float"
-    },
-     "servers": {
+        "type": "number"
+      },
+      "servers": {
         "description": "The number of servers.",
-        "type": "number",
-        "format": "integer"
-    },
-     "active_servers": {
+        "type": "integer"
+      },
+      "max_servers": {
+        "description": "The maximum number of servers.",
+        "type": "integer"
+      },
+      "active_servers": {
         "description": "The number of active servers.",
-        "type": "number",
-        "format": "integer"
-    },
-     "utilization": {
+        "type": "integer"
+      },
+      "utilization": {
         "description": "The server utilization.",
-        "type": "number",
-        "format": "float"
-    },
-     "basic_rt": {
+        "type": "number"
+      },
+      "basic_rt": {
         "description": "The response time of requests served without optional content.",
-        "type": "number",
-        "format": "float"
-    },
-     "basic_throughput": {
+        "type": "integer"
+      },
+      "basic_throughput": {
         "description": "The throughput of requests served without optional content.",
-        "type": "number",
-        "format": "float"
-    },
-     "opt_rt": {
+        "type": "number"
+      },
+      "opt_rt": {
         "description": "The response time of requests served with optional content.",
-        "type": "number",
-        "format": "float"
-    },
-     "opt_throughput": {
+        "type": "number"
+      },
+      "opt_throughput": {
         "description": "The throughput of requests served with optional content.",
-        "type": "number",
-        "format": "float"
-    },
-     "arrival_rate": {
+        "type": "number"
+      },
+      "arrival_rate": {
         "description": "The number of requests per second received by the web application.",
-        "type": "number",
-        "format": "integer"
+        "type": "integer"
+      }
     }
 }
