@@ -108,7 +108,7 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         } else {
             status_code = "404 Not Found";
         }
-    } else if (words[0] == "POST") {
+    } else if (words[0] == "PUT") {
         if (words[1] == "/execute") {
             std::string request_body = lines.back();
 
