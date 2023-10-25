@@ -17,9 +17,6 @@
 #include <map>
 #include <cmath>
 #include <sstream>
-#include <boost/tokenizer.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <managers/execution/ExecutionManagerMod.h>
 
 Define_Module(HTTPInterface);
@@ -31,10 +28,26 @@ using namespace std;
 namespace {
     const string UNKNOWN_COMMAND = "error: unknown command\n";
     const string COMMAND_SUCCESS = "OK\n";
+    const string BAD_REQUEST = "400 Bad Request";
+    const string MONITOR_SCHEMA_PATH = "specification/monitor_schema.json";
 }
 
 HTTPInterface::HTTPInterface() {
-    // get commands
+    // GET Requests
+    endpointGETHandlers["/monitor"] = std::bind(&HTTPInterface::epMonitorJSON, this, std::placeholders::_1);
+    endpointGETHandlers["/monitor_schema"] = std::bind(&HTTPInterface::epMonitorSchema, this, std::placeholders::_1);
+    endpointGETHandlers["/execute_schema"] = std::bind(&HTTPInterface::epExecuteSchema, this, std::placeholders::_1);
+    endpointGETHandlers["/adaptation_options"] = std::bind(&HTTPInterface::epAdapOptions, this, std::placeholders::_1);
+    endpointGETHandlers["/adaptation_options_schema"] = std::bind(&HTTPInterface::epAdapOptSchema, this, std::placeholders::_1);
+    endpointGETHandlers["/adaptation_options"] = std::bind(&HTTPInterface::epAdaptationOps, this, std::placeholders::_1);
+
+    // PUT Request
+    endpointPUTHandlers["/execute"] = std::bind(&HTTPInterface::epExecute, this, std::placeholders::_1);
+
+    HTTPAPI["GET"] = endpointGETHandlers;
+    HTTPAPI["PUT"] = endpointPUTHandlers;
+
+
     commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
     commandHandlers["servers"] = std::bind(&HTTPInterface::cmdGetServers, this, std::placeholders::_1);
     commandHandlers["active_servers"] = std::bind(&HTTPInterface::cmdGetActiveServers, this, std::placeholders::_1);
@@ -62,36 +75,63 @@ void HTTPInterface::initialize()
     pProbe = check_and_cast<IProbe*> (gate("probe")->getPreviousGate()->getOwnerModule());
 }
 
-void HTTPInterface::handleMessage(cMessage *msg) {
-    if (msg != rtEvent) {
-        // Handle the message only if it's the expected event
-        return;
-    }
-
+bool HTTPInterface::parseMessage() {
     // Get data from the buffer
     std::string input(recvBuffer, numRecvBytes);
     numRecvBytes = 0;
     // Reset buffer
     char recvBuffer[BUFFER_SIZE];
 
-    std::vector<std::string> words;
+    std::vector<std::string> http_request;
     std::istringstream iss(input);
-    for (std::string word; iss >> word;) { words.push_back(word); }
+    for (std::string word; iss >> word;) { http_request.push_back(word); }
+
+    if (http_request.empty()) {
+         // Handle the case where there are no words
+         return false;
+     }
 
     std::stringstream ss(input);
     std::vector<std::string> lines;
     std::string line;
     while (std::getline(ss, line, '\n')) { lines.push_back(line); }
 
-    std::string response_body = "";
-    std::string status_code = "200 OK";
-    boost::property_tree::ptree temp_json;
 
-    if (words.empty()) {
-        // Handle the case where there are no words
-        status_code = "400 Bad Request";
-    } else if (words[0] == "GET") {
-        if (words[1] == "/monitor") {
+    http_rq_type = http_request[0];
+    http_rq_endpoint = http_request[1];
+
+    if(lines.size() > 0){
+        http_rq_body = lines.back();
+
+    }
+    else {
+        http_rq_body = "";
+    }
+
+    return true;
+
+
+}
+
+void HTTPInterface::handleMessage(cMessage *msg) {
+    if (msg != rtEvent) {
+        // Handle the message only if it's the expected event
+        return;
+    }
+
+    bool valid_message = HTTPInterface::parseMessages();
+
+    if(!valid_message)
+    {
+        std::string bad_rq_resp = HTTPInterface::constructResponse(BAD_REQUEST,"");
+        rtScheduler->sendBytes(bad_rq_resp.c_str(), bad_rq_resp.length());
+        return;
+    }
+
+
+    HTTPAPI[http_rq_type][http_rq_endpoint](http_rq_body);
+
+
             for (const std::string& monitorable : monitor) {
                 // Add key-value pairs to the JSON object
                 temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
@@ -156,6 +196,37 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         response_body = oss.str();
     }
 
+
+    // Send the HTTP response
+    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+}
+
+std::string HTTPInterface::epMonitor(const std::string& arg){
+    boost::property_tree::read_json(MONITOR_SCHEMA_PATH, temp_json);
+
+}
+std::string HTTPInterface::epMonitorSchema(const std::string& arg){
+
+}
+std::string HTTPInterface::epExecuteSchema(const std::string& arg){
+
+}
+std::string HTTPInterface::epAdapOptions(const std::string& arg){
+
+}
+std::string HTTPInterface::epAdapOptSchema(const std::string& arg)
+{
+    }
+
+std::string HTTPInterface::epAdaptationOps(const std::string& arg){
+
+}
+std::string HTTPInterface::epExecute(const std::string& arg){
+
+}
+
+
+std::string HTTPInterface::constructResponse(const std::string& status_code, const std::string& response_body) {
     // Construct the HTTP response
     std::string http_response = 
         "HTTP/1.1 " + status_code + "\r\n"
@@ -165,8 +236,8 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         "Connection: close\r\n"
         "\r\n" + response_body;
 
-    // Send the HTTP response
-    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+    return http_response;
+
 }
 
 std::string HTTPInterface::cmdSetServers(const std::string& arg) {

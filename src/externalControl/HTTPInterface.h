@@ -23,7 +23,9 @@
 #include <map>
 #include "model/Model.h"
 #include "managers/monitor/IProbe.h"
-
+#include <boost/tokenizer.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 /**
  * Adaptation interface (probes and effectors)
  */
@@ -35,32 +37,52 @@ public:
 
 protected:
     std::map<std::string, std::function<std::string(const std::string&)>> commandHandlers;
+    std::map<std::string, std::function<std::string(const std::string&)>> endpointGETHandlers;
+    std::map<std::string, std::function<std::string(const std::string&)>> endpointPUTHandlers;
+    std::map< std::string, std::map<std::string, std::function<std::string(const std::string&)>> > HTTPAPI;
     Model* pModel;
     IProbe* pProbe;
 
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
 
-    virtual std::string cmdSetServers(const std::string& arg);
-    virtual std::string cmdAddServer(const std::string& arg);
-    virtual std::string cmdRemoveServer(const std::string& arg);
-    virtual std::string cmdSetDimmer(const std::string& arg);
+    virtual std::string epMonitor(const std::string& arg);
+    virtual std::string epMonitorSchema(const std::string& arg);
+    virtual std::string epExecuteSchema(const std::string& arg);
+    virtual std::string epAdapOptions(const std::string& arg);
+    virtual std::string epAdapOptSchema(const std::string& arg);
+    virtual std::string epAdaptationOps(const std::string& arg);
+    virtual std::string epExecute(const std::string& arg);
 
-    virtual std::string cmdGetDimmer(const std::string& arg);
-    virtual std::string cmdGetServers(const std::string& arg);
-    virtual std::string cmdGetActiveServers(const std::string& arg);
-    virtual std::string cmdGetMaxServers(const std::string& arg);
-    virtual std::string cmdGetUtilization(const std::string& arg);
-    virtual std::string cmdGetBasicResponseTime(const std::string& arg);
-    virtual std::string cmdGetBasicThroughput(const std::string& arg);
-    virtual std::string cmdGetOptResponseTime(const std::string& arg);
-    virtual std::string cmdGetOptThroughput(const std::string& arg);
-    virtual std::string cmdGetArrivalRate(const std::string& arg);
+
+//    virtual std::string cmdSetServers(const std::string& arg);
+//    virtual std::string cmdAddServer(const std::string& arg);
+//    virtual std::string cmdRemoveServer(const std::string& arg);
+//    virtual std::string cmdSetDimmer(const std::string& arg);
+//
+//    virtual std::string cmdGetDimmer(const std::string& arg);
+//    virtual std::string cmdGetServers(const std::string& arg);
+//    virtual std::string cmdGetActiveServers(const std::string& arg);
+//    virtual std::string cmdGetMaxServers(const std::string& arg);
+//    virtual std::string cmdGetUtilization(const std::string& arg);
+//    virtual std::string cmdGetBasicResponseTime(const std::string& arg);
+//    virtual std::string cmdGetBasicThroughput(const std::string& arg);
+//    virtual std::string cmdGetOptResponseTime(const std::string& arg);
+//    virtual std::string cmdGetOptThroughput(const std::string& arg);
+//    virtual std::string cmdGetArrivalRate(const std::string& arg);
 
 private:
     static const unsigned BUFFER_SIZE = 4000;
     cMessage *rtEvent;
     cSocketRTScheduler *rtScheduler;
+
+    std::string http_rq_type;
+    std::string http_rq_body;
+    std::string http_rq_endpoint;
+
+    std::string response_body;
+    std::string status_code;
+    boost::property_tree::ptree temp_json;
 
     char recvBuffer[BUFFER_SIZE];
     int numRecvBytes;
