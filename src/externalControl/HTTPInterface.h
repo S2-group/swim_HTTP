@@ -36,23 +36,32 @@ public:
     virtual ~HTTPInterface();
 
 protected:
-    std::map<std::string, std::function<std::string(const std::string&)>> commandHandlers;
+    std::map<std::string, std::any> monitorVars;
     std::map<std::string, std::function<std::string(const std::string&)>> endpointGETHandlers;
     std::map<std::string, std::function<std::string(const std::string&)>> endpointPUTHandlers;
-    std::map< std::string, std::map<std::string, std::function<std::string(const std::string&)>> > HTTPAPI;
+    std::map<std::string, std::map<std::string, std::function<std::string(const std::string&)>> > HTTPAPI;
     Model* pModel;
     IProbe* pProbe;
 
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
+    virtual bool parseMessage();
+    virtual void sendResponse(const std::string& status_code, const std::string& response_body);
+    virtual void updateMonitoring();
+
+    boost::property_tree::ptree allUtilization();
+
+    template <class T>
+    void putInJSON (std::string json_key, T item, boost::property_tree::ptree& json_file);
+
 
     virtual std::string epMonitor(const std::string& arg);
     virtual std::string epMonitorSchema(const std::string& arg);
     virtual std::string epExecuteSchema(const std::string& arg);
     virtual std::string epAdapOptions(const std::string& arg);
     virtual std::string epAdapOptSchema(const std::string& arg);
-    virtual std::string epAdaptationOps(const std::string& arg);
     virtual std::string epExecute(const std::string& arg);
+
 
 
 //    virtual std::string cmdSetServers(const std::string& arg);
@@ -79,15 +88,26 @@ private:
     std::string http_rq_type;
     std::string http_rq_body;
     std::string http_rq_endpoint;
-
+    std::vector<std::string> lines;
     std::string response_body;
     std::string status_code;
-    boost::property_tree::ptree temp_json;
+    boost::property_tree::ptree json_file;
+
+    double dimmer_factor;
+    int servers;
+    int active_servers;
+    double basic_rt;
+    int max_servers;
+    double basic_throughput;
+    double opt_throughput;
+    double opt_rt;
+    double arrival_rate;
+    boost::property_tree::ptree utilization;
 
     char recvBuffer[BUFFER_SIZE];
     int numRecvBytes;
 
-    std::vector<std::string> monitor = {
+    std::vector<std::string> monitorable_list = {
       "dimmer",
       "servers",
       "active_servers",

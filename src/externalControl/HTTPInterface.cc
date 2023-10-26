@@ -30,12 +30,14 @@ namespace {
     const string COMMAND_SUCCESS = "OK\n";
     const string BAD_REQUEST = "400 Bad Request";
     const string MONITOR_SCHEMA_PATH = "specification/monitor_schema.json";
-    const string UNKNOWN_ENDPOINT = "404 Not Found"
+    const string UNKNOWN_ENDPOINT = "404 Not Found";
+    const string METHOD_UNALLOW =  "405 Method Not Allowed";
+    const string HTTP_OK = "200 OK";
 }
 
 HTTPInterface::HTTPInterface() {
     // GET Requests
-    endpointGETHandlers["/monitor"] = std::bind(&HTTPInterface::epMonitorJSON, this, std::placeholders::_1);
+    endpointGETHandlers["/monitor"] = std::bind(&HTTPInterface::epMonitor, this, std::placeholders::_1);
     endpointGETHandlers["/monitor_schema"] = std::bind(&HTTPInterface::epMonitorSchema, this, std::placeholders::_1);
     endpointGETHandlers["/execute_schema"] = std::bind(&HTTPInterface::epExecuteSchema, this, std::placeholders::_1);
     endpointGETHandlers["/adaptation_options"] = std::bind(&HTTPInterface::epAdapOptions, this, std::placeholders::_1);
@@ -48,16 +50,16 @@ HTTPInterface::HTTPInterface() {
     HTTPAPI["PUT"] = endpointPUTHandlers;
 
 
-    commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
-    commandHandlers["servers"] = std::bind(&HTTPInterface::cmdGetServers, this, std::placeholders::_1);
-    commandHandlers["active_servers"] = std::bind(&HTTPInterface::cmdGetActiveServers, this, std::placeholders::_1);
-    commandHandlers["max_servers"] = std::bind(&HTTPInterface::cmdGetMaxServers, this, std::placeholders::_1);
-    commandHandlers["utilization"] = std::bind(&HTTPInterface::cmdGetUtilization, this, std::placeholders::_1);
-    commandHandlers["basic_rt"] = std::bind(&HTTPInterface::cmdGetBasicResponseTime, this, std::placeholders::_1);
-    commandHandlers["basic_throughput"] = std::bind(&HTTPInterface::cmdGetBasicThroughput, this, std::placeholders::_1);
-    commandHandlers["opt_rt"] = std::bind(&HTTPInterface::cmdGetOptResponseTime, this, std::placeholders::_1);
-    commandHandlers["opt_throughput"] = std::bind(&HTTPInterface::cmdGetOptThroughput, this, std::placeholders::_1);
-    commandHandlers["arrival_rate"] = std::bind(&HTTPInterface::cmdGetArrivalRate, this, std::placeholders::_1);
+    monitorHandlers["dimmer"] = std::bind(&Model::getBrownoutFactor, &Model);
+//    commandHandlers["servers"] = std::bind(&HTTPInterface::cmdGetServers, this, std::placeholders::_1);
+//    commandHandlers["active_servers"] = std::bind(&HTTPInterface::cmdGetActiveServers, this, std::placeholders::_1);
+//    commandHandlers["max_servers"] = std::bind(&HTTPInterface::cmdGetMaxServers, this, std::placeholders::_1);
+//    commandHandlers["utilization"] = std::bind(&HTTPInterface::cmdGetUtilization, this, std::placeholders::_1);
+//    commandHandlers["basic_rt"] = std::bind(&HTTPInterface::cmdGetBasicResponseTime, this, std::placeholders::_1);
+//    commandHandlers["basic_throughput"] = std::bind(&HTTPInterface::cmdGetBasicThroughput, this, std::placeholders::_1);
+//    commandHandlers["opt_rt"] = std::bind(&HTTPInterface::cmdGetOptResponseTime, this, std::placeholders::_1);
+//    commandHandlers["opt_throughput"] = std::bind(&HTTPInterface::cmdGetOptThroughput, this, std::placeholders::_1);
+//    commandHandlers["arrival_rate"] = std::bind(&HTTPInterface::cmdGetArrivalRate, this, std::placeholders::_1);
 
     // dimmer, numServers, numActiveServers, utilization(total or indiv), response time and throughput for mandatory and optional, avg arrival rate
 }
@@ -92,7 +94,7 @@ bool HTTPInterface::parseMessage() {
      }
 
     std::stringstream ss(input);
-    std::vector<std::string> lines;
+
     std::string line;
     while (std::getline(ss, line, '\n')) { lines.push_back(line); }
 
@@ -113,33 +115,55 @@ bool HTTPInterface::parseMessage() {
 
 }
 
+void HTTPInterface::sendResponse(const std::string& status_code, const std::string& response_body) {
+    std::string http_response =
+        "HTTP/1.1 " + status_code + "\r\n"
+        "Content-Type: application/json\r\n"
+        "Content-Length: " + std::to_string(response_body.length()) + "\r\n"
+        "Accept-Ranges: bytes\r\n"
+        "Connection: close\r\n"
+        "\r\n" + response_body;
+
+    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+
+
+}
 void HTTPInterface::handleMessage(cMessage *msg) {
     if (msg != rtEvent) {
         // Handle the message only if it's the expected event
         return;
     }
 
-    bool valid_message = HTTPInterface::parseMessages();
+    bool valid_message = HTTPInterface::parseMessage();
 
     if(!valid_message)
     {
-        std::string bad_rq_resp = HTTPInterface::constructResponse(BAD_REQUEST,"");
-        rtScheduler->sendBytes(bad_rq_resp.c_str(), bad_rq_resp.length());
+        HTTPInterface::sendResponse(BAD_REQUEST,"");
+        return;
+    }
+    std::map<std::string, std::map<std::string, std::function<std::string(const std::string&)>>>::iterator method_it;
+    method_it = HTTPAPI.find(http_rq_type);
+
+    if (method_it == HTTPAPI.end())
+    {
+        HTTPInterface::sendResponse(METHOD_UNALLOW,"");
         return;
     }
 
+    std::map<std::string, std::function<std::string(const std::string&)>>::iterator endpoint_it;
+    HTTPAPI[http_rq_type].find(http_rq_endpoint);
+
+    if (endpoint_it == HTTPAPI[http_rq_type].end())
+    {
+        HTTPInterface::sendResponse(UNKNOWN_ENDPOINT,"");
+        return;
+    }
 
     HTTPAPI[http_rq_type][http_rq_endpoint](http_rq_body);
 
 
-    std::string uk_rq_resp = HTTPInterface::constructResponse(UNKNOWN,"");
-    rtScheduler->sendBytes(uk_rq_resp.c_str(), uk_rq_resp.length());
-    return;
 
 
-    } else {
-        status_code = "405 Method Not Allowed";
-    }
 
     // Get the JSON string if request is valid
     if (status_code == "200 OK") {
@@ -150,15 +174,60 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
 
     // Send the HTTP response
-    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+//    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+}
+
+void HTTPInterface::updateMonitoring(){
+    dimmer_factor = pModel->getDimmerFactor();
+    servers =  pModel->getServers();
+    active_servers = pModel->getActiveServers();
+    basic_rt = pProbe->getBasicResponseTime();
+    max_servers = pModel->getMaxServers();
+    basic_throughput = pProbe->getBasicThroughput();
+    opt_throughput = pProbe->getOptThroughput();
+    opt_rt = pProbe->getOptResponseTime();
+    arrival_rate = pProbe->getArrivalRate();
+    utilization = HTTPInterface::allUtilization();
+
+    //monitor_mapping["utilization"] = std::bind(&HTTPInterface::addUtilization, this, std::placeholders::_1);
+}
+
+boost::property_tree::ptree HTTPInterface::allUtilization() {
+    int max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
+    boost::property_tree::ptree server_array_ptree;
+
+    for(int i = 1; i <= max; i++) {
+        boost::property_tree::ptree server;
+        std::string server_name = "server" + std::to_string(i);
+        double utilization = pProbe->getUtilization(server_name);
+
+        if (utilization < 0) {
+            utilization = 0;
+        }
+
+        server.put("server_name", server_name);
+        server.put("utilization_value", utilization);
+
+        // Add each server ptree to the main ptree using push_back
+        server_array_ptree.push_back(std::make_pair("", server));
+    }
+    return server_array_ptree;
+}
+
+template <class T>
+void HTTPInterface::putInJSON (std::string json_key, T item, boost::property_tree::ptree& json_file) {
+    json_file.put(json_key, item);
 }
 
 std::string HTTPInterface::epMonitor(const std::string& arg){
-    for (const std::string& monitorable : monitor) {
-        // Add key-value pairs to the JSON object
-        temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
-    }
+    HTTPInterface::updateMonitoring();
+    for (const std::string& monitorable : monitorable_list) {
+        json_file.put(monitorable, dimmer_factor);
 
+        // Add key-value pairs to the JSON object
+        //temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
+    }
+    return "";
 
 }
 std::string HTTPInterface::epMonitorSchema(const std::string& arg){
@@ -185,8 +254,8 @@ std::string HTTPInterface::epExecute(const std::string& arg){
     boost::property_tree::read_json(json_stream, json_request);
 
     std::string servers_now, dimmer_now;
-    servers_now = HTTPInterface::cmdGetServers(std::string());
-    dimmer_now = HTTPInterface::cmdGetDimmer(std::string());
+    //servers_now = HTTPInterface::cmdGetServers(std::string());
+    //dimmer_now = HTTPInterface::cmdGetDimmer(std::string());
 
     try {
         std::string servers_request, dimmer_request, server_request_status, dimmer_request_status;
@@ -194,13 +263,13 @@ std::string HTTPInterface::epExecute(const std::string& arg){
         dimmer_request = json_request.get<std::string>("dimmer_factor");
 
         if (servers_now != servers_request) {
-            server_request_status = HTTPInterface::cmdSetServers(servers_request);
+            //server_request_status = HTTPInterface::cmdSetServers(servers_request);
         } else {
             server_request_status = "Number of servers already satisfied";
         }
 
         if (dimmer_now != dimmer_request) {
-            dimmer_request_status = HTTPInterface::cmdSetDimmer(dimmer_request);
+            //dimmer_request_status = HTTPInterface::cmdSetDimmer(dimmer_request);
         } else {
             dimmer_request_status = "Dimmer factor already satisfied";
         }
@@ -215,159 +284,148 @@ std::string HTTPInterface::epExecute(const std::string& arg){
 }
 
 
-std::string HTTPInterface::constructResponse(const std::string& status_code, const std::string& response_body) {
-    // Construct the HTTP response
-    std::string http_response = 
-        "HTTP/1.1 " + status_code + "\r\n"
-        "Content-Type: application/json\r\n"
-        "Content-Length: " + std::to_string(response_body.length()) + "\r\n"
-        "Accept-Ranges: bytes\r\n"
-        "Connection: close\r\n"
-        "\r\n" + response_body;
 
-    return http_response;
-
-}
-
-std::string HTTPInterface::cmdSetServers(const std::string& arg) {
-    try {
-        int arg_int, val, max, diff;
-        arg_int = std::stoi(arg);
-        val = std::stoi(HTTPInterface::cmdGetServers(""));
-        max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
-        diff = std::abs(arg_int - val);
-
-        if (arg_int > max) {
-            return "error: max servers exceeded";
-        }
-
-        for (int i = 0; i < diff; ++i) {
-            if (arg_int < val) {
-                HTTPInterface::cmdRemoveServer(arg);
-            } else if (arg_int > val && arg_int <= max) { 
-                HTTPInterface::cmdAddServer(arg);
-            }
-        }
-
-        return COMMAND_SUCCESS;
-    }
-    catch (const std::invalid_argument& ia) {
-        return "error: invalid argument";
-    }
-    catch (const std::out_of_range& oor) {
-        return "error: out of range";
-    }
-}
-
-std::string HTTPInterface::cmdAddServer(const std::string& arg) {
-    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
-    pExecMgr->addServer();
-
-    return COMMAND_SUCCESS;
-}
-
-std::string HTTPInterface::cmdRemoveServer(const std::string& arg) {
-    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
-    pExecMgr->removeServer();
-
-    return COMMAND_SUCCESS;
-}
-
-std::string HTTPInterface::cmdSetDimmer(const std::string& arg) {
-    if (arg == "") {
-        return "\"error: missing dimmer argument\"";
-    }
-
-    double dimmer = atof(arg.c_str());
-    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
-    pExecMgr->setBrownout(1 - dimmer);
-
-    return COMMAND_SUCCESS;
-}
+//std::string HTTPInterface::cmdSetServers(const std::string& arg) {
+//    try {
+//        int arg_int, val, max, diff;
+//        arg_int = std::stoi(arg);
+//        val = std::stoi(HTTPInterface::cmdGetServers(""));
+//        max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
+//        diff = std::abs(arg_int - val);
+//
+//        if (arg_int > max) {
+//            return "error: max servers exceeded";
+//        }
+//
+//        for (int i = 0; i < diff; ++i) {
+//            if (arg_int < val) {
+//                HTTPInterface::cmdRemoveServer(arg);
+//            } else if (arg_int > val && arg_int <= max) {
+//                HTTPInterface::cmdAddServer(arg);
+//            }
+//        }
+//
+//        return COMMAND_SUCCESS;
+//    }
+//    catch (const std::invalid_argument& ia) {
+//        return "error: invalid argument";
+//    }
+//    catch (const std::out_of_range& oor) {
+//        return "error: out of range";
+//    }
+//}
 
 
-std::string HTTPInterface::cmdGetDimmer(const std::string& arg) {
-    ostringstream reply;
-    double brownoutFactor = pModel->getBrownoutFactor();
-    double dimmer = (1 - brownoutFactor);
-
-    reply << dimmer;
-
-    return reply.str();
-}
-
-
-std::string HTTPInterface::cmdGetServers(const std::string& arg) {
-    ostringstream reply;
-    reply << pModel->getServers();
-
-    return reply.str();
-}
-
-
-std::string HTTPInterface::cmdGetActiveServers(const std::string& arg) {
-    ostringstream reply;
-    reply << pModel->getActiveServers();
-
-    return reply.str();
-}
-
-
-std::string HTTPInterface::cmdGetMaxServers(const std::string& arg) {
-    ostringstream reply;
-    reply << pModel->getMaxServers();
-
-    return reply.str();
-}
-
-
-std::string HTTPInterface::cmdGetUtilization(const std::string& arg) {
-    if (arg == "") {
-        return "\"error: missing server argument\"";
-    }
-
-    ostringstream reply;
-    auto utilization = pProbe->getUtilization(arg);
-    if (utilization < 0) {
-        reply << "\"error: server \'" << arg << "\' does no exist\"";
-    } else {
-        reply << utilization;
-    }
-
-    return reply.str();
-}
-
-std::string HTTPInterface::cmdGetBasicResponseTime(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getBasicResponseTime();
-
-    return reply.str();
-}
-
-std::string HTTPInterface::cmdGetBasicThroughput(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getBasicThroughput();
-
-    return reply.str();
-}
-
-std::string HTTPInterface::cmdGetOptResponseTime(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getOptResponseTime();
-
-    return reply.str();
-}
-
-std::string HTTPInterface::cmdGetOptThroughput(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getOptThroughput();
-
-    return reply.str();
-}
-
-std::string HTTPInterface::cmdGetArrivalRate(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getArrivalRate();
-
-    return reply.str();
-}
+//
+//std::string HTTPInterface::cmdAddServer(const std::string& arg) {
+//    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
+//    pExecMgr->addServer();
+//
+//    return COMMAND_SUCCESS;
+//}
+//
+//std::string HTTPInterface::cmdRemoveServer(const std::string& arg) {
+//    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
+//    pExecMgr->removeServer();
+//
+//    return COMMAND_SUCCESS;
+//}
+//
+//std::string HTTPInterface::cmdSetDimmer(const std::string& arg) {
+//    if (arg == "") {
+//        return "\"error: missing dimmer argument\"";
+//    }
+//
+//    double dimmer = atof(arg.c_str());
+//    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
+//    pExecMgr->setBrownout(1 - dimmer);
+//
+//    return COMMAND_SUCCESS;
+//}
+//
+//
+//std::string HTTPInterface::cmdGetDimmer(const std::string& arg) {
+//    ostringstream reply;
+//    double brownoutFactor = pModel->getBrownoutFactor();
+//    double dimmer = (1 - brownoutFactor);
+//
+//    reply << dimmer;
+//
+//    return reply.str();
+//}
+//
+//
+//std::string HTTPInterface::cmdGetServers(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pModel->getServers();
+//
+//    return reply.str();
+//}
+//
+//
+//std::string HTTPInterface::cmdGetActiveServers(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pModel->getActiveServers();
+//
+//    return reply.str();
+//}
+//
+//
+//std::string HTTPInterface::cmdGetMaxServers(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pModel->getMaxServers();
+//
+//    return reply.str();
+//}
+//
+//
+//std::string HTTPInterface::cmdGetUtilization(const std::string& arg) {
+//    if (arg == "") {
+//        return "\"error: missing server argument\"";
+//    }
+//
+//    ostringstream reply;
+//    auto utilization = pProbe->getUtilization(arg);
+//    if (utilization < 0) {
+//        reply << "\"error: server \'" << arg << "\' does no exist\"";
+//    } else {
+//        reply << utilization;
+//    }
+//
+//    return reply.str();
+//}
+//
+//std::string HTTPInterface::cmdGetBasicResponseTime(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pProbe->getBasicResponseTime();
+//
+//    return reply.str();
+//}
+//
+//std::string HTTPInterface::cmdGetBasicThroughput(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pProbe->getBasicThroughput();
+//
+//    return reply.str();
+//}
+//
+//std::string HTTPInterface::cmdGetOptResponseTime(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pProbe->getOptResponseTime();
+//
+//    return reply.str();
+//}
+//
+//std::string HTTPInterface::cmdGetOptThroughput(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pProbe->getOptThroughput();
+//
+//    return reply.str();
+//}
+//
+//std::string HTTPInterface::cmdGetArrivalRate(const std::string& arg) {
+//    ostringstream reply;
+//    reply << pProbe->getArrivalRate();
+//
+//    return reply.str();
+//}
