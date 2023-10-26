@@ -3,7 +3,7 @@
     "properties": {
       "dimmer": {
         "descriptions": "Proportion of requests served with optional content.",
-        "type": "float"
+        "type": "number"
       },
       "servers": {
         "description": "The number of servers.",
@@ -19,7 +19,19 @@
       },
       "utilization": {
         "description": "The server utilization.",
-        "type": "float"
+        "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "server_name": {
+                        "type": "string"
+                    },
+                    "utilization_value": {
+                        "type": "integer"
+                    }
+                },
+                "required": ["server_name", "utilization_value"]
+            }
       },
       "basic_rt": {
         "description": "The response time of requests served without optional content.",
