@@ -19,6 +19,7 @@
 #include <omnetpp.h>
 #include <string>
 #include <vector>
+#include <boost/property_tree/ptree.hpp>
 #include <functional>
 #include <map>
 #include "model/Model.h"
@@ -34,7 +35,8 @@ public:
     virtual ~HTTPInterface();
 
 protected:
-    std::map<std::string, std::function<std::string(const std::string&)>> commandHandlers;
+    std::map<std::string, std::function<void(boost::property_tree::ptree&)>> monitor_mapping;
+
     Model* pModel;
     IProbe* pProbe;
 
@@ -48,14 +50,18 @@ protected:
 
     virtual std::string cmdGetDimmer(const std::string& arg);
     virtual std::string cmdGetServers(const std::string& arg);
-    virtual std::string cmdGetActiveServers(const std::string& arg);
     virtual std::string cmdGetMaxServers(const std::string& arg);
-    virtual std::string cmdGetUtilization(const std::string& arg);
-    virtual std::string cmdGetBasicResponseTime(const std::string& arg);
-    virtual std::string cmdGetBasicThroughput(const std::string& arg);
-    virtual std::string cmdGetOptResponseTime(const std::string& arg);
-    virtual std::string cmdGetOptThroughput(const std::string& arg);
-    virtual std::string cmdGetArrivalRate(const std::string& arg);
+
+    virtual void addDimmer(boost::property_tree::ptree& json);
+    virtual void addServers(boost::property_tree::ptree& json);
+    virtual void addActiveServers(boost::property_tree::ptree& json);
+    virtual void addMaxServers(boost::property_tree::ptree& json);
+    virtual void addUtilization(boost::property_tree::ptree& json);
+    virtual void addBasicResponseTime(boost::property_tree::ptree& json);
+    virtual void addBasicThroughput(boost::property_tree::ptree& json);
+    virtual void addOptResponseTime(boost::property_tree::ptree& json);
+    virtual void addOptThroughput(boost::property_tree::ptree& json);
+    virtual void addArrivalRate(boost::property_tree::ptree& json);
 
 private:
     static const unsigned BUFFER_SIZE = 4000;
@@ -80,7 +86,7 @@ private:
 
     std::vector<std::string> adaptations = {
       "server_number",
-      "dimmer_number"
+      "dimmer_factor"
     };
 };
 
