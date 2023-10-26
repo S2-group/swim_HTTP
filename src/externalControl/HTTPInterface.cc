@@ -17,6 +17,7 @@
 #include <map>
 #include <cmath>
 #include <sstream>
+#include <regex>
 #include <boost/tokenizer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -33,18 +34,22 @@ namespace {
     const string COMMAND_SUCCESS = "OK\n";
 }
 
+std::string removeQuotesAroundNumbers(const std::string& input) {
+    std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
+    return std::regex_replace(input, regex, "$1");
+}
+
 HTTPInterface::HTTPInterface() {
-    // get commands
-    commandHandlers["dimmer"] = std::bind(&HTTPInterface::cmdGetDimmer, this, std::placeholders::_1);
-    commandHandlers["servers"] = std::bind(&HTTPInterface::cmdGetServers, this, std::placeholders::_1);
-    commandHandlers["active_servers"] = std::bind(&HTTPInterface::cmdGetActiveServers, this, std::placeholders::_1);
-    commandHandlers["max_servers"] = std::bind(&HTTPInterface::cmdGetMaxServers, this, std::placeholders::_1);
-    commandHandlers["utilization"] = std::bind(&HTTPInterface::cmdGetUtilization, this, std::placeholders::_1);
-    commandHandlers["basic_rt"] = std::bind(&HTTPInterface::cmdGetBasicResponseTime, this, std::placeholders::_1);
-    commandHandlers["basic_throughput"] = std::bind(&HTTPInterface::cmdGetBasicThroughput, this, std::placeholders::_1);
-    commandHandlers["opt_rt"] = std::bind(&HTTPInterface::cmdGetOptResponseTime, this, std::placeholders::_1);
-    commandHandlers["opt_throughput"] = std::bind(&HTTPInterface::cmdGetOptThroughput, this, std::placeholders::_1);
-    commandHandlers["arrival_rate"] = std::bind(&HTTPInterface::cmdGetArrivalRate, this, std::placeholders::_1);
+    monitor_mapping["dimmer"] = std::bind(&HTTPInterface::addDimmer, this, std::placeholders::_1);
+    monitor_mapping["servers"] = std::bind(&HTTPInterface::addServers, this, std::placeholders::_1);
+    monitor_mapping["active_servers"] = std::bind(&HTTPInterface::addActiveServers, this, std::placeholders::_1);
+    monitor_mapping["max_servers"] = std::bind(&HTTPInterface::addMaxServers, this, std::placeholders::_1);
+    monitor_mapping["utilization"] = std::bind(&HTTPInterface::addUtilization, this, std::placeholders::_1);
+    monitor_mapping["basic_rt"] = std::bind(&HTTPInterface::addBasicResponseTime, this, std::placeholders::_1);
+    monitor_mapping["basic_throughput"] = std::bind(&HTTPInterface::addBasicThroughput, this, std::placeholders::_1);
+    monitor_mapping["opt_rt"] = std::bind(&HTTPInterface::addOptResponseTime, this, std::placeholders::_1);
+    monitor_mapping["opt_throughput"] = std::bind(&HTTPInterface::addOptThroughput, this, std::placeholders::_1);
+    monitor_mapping["arrival_rate"] = std::bind(&HTTPInterface::addArrivalRate, this, std::placeholders::_1);
 
     // dimmer, numServers, numActiveServers, utilization(total or indiv), response time and throughput for mandatory and optional, avg arrival rate
 }
@@ -94,7 +99,7 @@ void HTTPInterface::handleMessage(cMessage *msg) {
         if (words[1] == "/monitor") {
             for (const std::string& monitorable : monitor) {
                 // Add key-value pairs to the JSON object
-                temp_json.put(monitorable, commandHandlers[monitorable](std::string()));
+                monitor_mapping[monitorable](temp_json);
             }
         } else if (words[1] == "/monitor_schema") {
             boost::property_tree::read_json("specification/monitor_schema.json", temp_json);
@@ -153,7 +158,7 @@ void HTTPInterface::handleMessage(cMessage *msg) {
     if (status_code == "200 OK") {
         std::ostringstream oss;
         boost::property_tree::write_json(oss, temp_json);
-        response_body = oss.str();
+        response_body = removeQuotesAroundNumbers(oss.str());
     }
 
     // Construct the HTTP response
@@ -225,7 +230,6 @@ std::string HTTPInterface::cmdSetDimmer(const std::string& arg) {
     return COMMAND_SUCCESS;
 }
 
-
 std::string HTTPInterface::cmdGetDimmer(const std::string& arg) {
     ostringstream reply;
     double brownoutFactor = pModel->getBrownoutFactor();
@@ -236,22 +240,12 @@ std::string HTTPInterface::cmdGetDimmer(const std::string& arg) {
     return reply.str();
 }
 
-
 std::string HTTPInterface::cmdGetServers(const std::string& arg) {
     ostringstream reply;
     reply << pModel->getServers();
 
     return reply.str();
 }
-
-
-std::string HTTPInterface::cmdGetActiveServers(const std::string& arg) {
-    ostringstream reply;
-    reply << pModel->getActiveServers();
-
-    return reply.str();
-}
-
 
 std::string HTTPInterface::cmdGetMaxServers(const std::string& arg) {
     ostringstream reply;
@@ -260,54 +254,80 @@ std::string HTTPInterface::cmdGetMaxServers(const std::string& arg) {
     return reply.str();
 }
 
+void HTTPInterface::addDimmer(boost::property_tree::ptree& json) {
+    double brownoutFactor = pModel->getBrownoutFactor();
+    double dimmer = (1 - brownoutFactor);
 
-std::string HTTPInterface::cmdGetUtilization(const std::string& arg) {
-    if (arg == "") {
-        return "\"error: missing server argument\"";
+    json.put("dimmer", dimmer);
+}
+
+void HTTPInterface::addServers(boost::property_tree::ptree& json) {
+    int servers = pModel->getServers();
+
+    json.put("servers", servers);
+}
+
+void HTTPInterface::addActiveServers(boost::property_tree::ptree& json) {
+    int active_servers = pModel->getActiveServers();
+
+    json.put("active_servers", active_servers);
+}
+
+void HTTPInterface::addMaxServers(boost::property_tree::ptree& json) {
+    int max_servers = pModel->getMaxServers();
+
+    json.put("max_servers", max_servers);
+}
+
+void HTTPInterface::addUtilization(boost::property_tree::ptree& json) {
+    int max = std::stoi(HTTPInterface::cmdGetMaxServers(""));
+    boost::property_tree::ptree server_array_ptree;
+
+    for(int i = 1; i <= max; i++) {
+        boost::property_tree::ptree server;
+        std::string server_name = "server_" + std::to_string(i);
+        auto utilization = pProbe->getUtilization(server_name);
+
+        if (utilization < 0) {
+            utilization = 0;
+        }
+
+        server.put("server_name", server_name);
+        server.put("utilization_value", utilization);
+
+        // Add each server ptree to the main ptree using push_back
+        server_array_ptree.push_back(std::make_pair("", server));
     }
 
-    ostringstream reply;
-    auto utilization = pProbe->getUtilization(arg);
-    if (utilization < 0) {
-        reply << "\"error: server \'" << arg << "\' does no exist\"";
-    } else {
-        reply << utilization;
-    }
-
-    return reply.str();
+    json.put_child("utilization", server_array_ptree);
 }
 
-std::string HTTPInterface::cmdGetBasicResponseTime(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getBasicResponseTime();
+void HTTPInterface::addBasicResponseTime(boost::property_tree::ptree& json) {
+     double basic_rt = pProbe->getBasicResponseTime();
 
-    return reply.str();
+    json.put("basic_rt", basic_rt);
 }
 
-std::string HTTPInterface::cmdGetBasicThroughput(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getBasicThroughput();
+void HTTPInterface::addBasicThroughput(boost::property_tree::ptree& json) {
+    double basic_throughput = pProbe->getBasicThroughput();
 
-    return reply.str();
+    json.put("basic_throughput", basic_throughput);
 }
 
-std::string HTTPInterface::cmdGetOptResponseTime(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getOptResponseTime();
+void HTTPInterface::addOptResponseTime(boost::property_tree::ptree& json) {
+    double opt_rt = pProbe->getOptResponseTime();
 
-    return reply.str();
+    json.put("opt_rt", opt_rt);
 }
 
-std::string HTTPInterface::cmdGetOptThroughput(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getOptThroughput();
+void HTTPInterface::addOptThroughput(boost::property_tree::ptree& json) {
+    double opt_throughput = pProbe->getOptThroughput();
 
-    return reply.str();
+    json.put("opt_throughput", opt_throughput);
 }
 
-std::string HTTPInterface::cmdGetArrivalRate(const std::string& arg) {
-    ostringstream reply;
-    reply << pProbe->getArrivalRate();
+void HTTPInterface::addArrivalRate(boost::property_tree::ptree& json) {
+    double arrival_rate = pProbe->getArrivalRate();
 
-    return reply.str();
+    json.put("arrival_rate", arrival_rate);
 }
