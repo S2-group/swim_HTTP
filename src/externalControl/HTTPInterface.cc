@@ -175,6 +175,8 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 }
 
 std::string HTTPInterface::cmdSetServers(const std::string& arg) {
+    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
+
     try {
         int arg_int, val, max, diff;
         arg_int = std::stoi(arg);
@@ -188,9 +190,9 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
 
         for (int i = 0; i < diff; ++i) {
             if (arg_int < val) {
-                HTTPInterface::cmdRemoveServer(arg);
+                pExecMgr->removeServer();
             } else if (arg_int > val && arg_int <= max) { 
-                HTTPInterface::cmdAddServer(arg);
+                pExecMgr->addServer();
             }
         }
 
@@ -202,20 +204,6 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
     catch (const std::out_of_range& oor) {
         return "error: out of range";
     }
-}
-
-std::string HTTPInterface::cmdAddServer(const std::string& arg) {
-    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
-    pExecMgr->addServer();
-
-    return COMMAND_SUCCESS;
-}
-
-std::string HTTPInterface::cmdRemoveServer(const std::string& arg) {
-    ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
-    pExecMgr->removeServer();
-
-    return COMMAND_SUCCESS;
 }
 
 std::string HTTPInterface::cmdSetDimmer(const std::string& arg) {
@@ -285,7 +273,7 @@ void HTTPInterface::addUtilization(boost::property_tree::ptree& json) {
 
     for(int i = 1; i <= max; i++) {
         boost::property_tree::ptree server;
-        std::string server_name = "server_" + std::to_string(i);
+        std::string server_name = "server" + std::to_string(i);
         auto utilization = pProbe->getUtilization(server_name);
 
         if (utilization < 0) {
