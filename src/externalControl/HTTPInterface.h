@@ -44,8 +44,6 @@ protected:
     virtual void handleMessage(cMessage *msg);
 
     virtual std::string cmdSetServers(const std::string& arg);
-    virtual std::string cmdAddServer(const std::string& arg);
-    virtual std::string cmdRemoveServer(const std::string& arg);
     virtual std::string cmdSetDimmer(const std::string& arg);
 
     virtual std::string cmdGetDimmer(const std::string& arg);
