@@ -20,8 +20,6 @@
 #include <regex>
 #include <managers/execution/ExecutionManagerMod.h>
 
-
-
 Define_Module(HTTPInterface);
 
 #define DEBUG_HTTP_INTERFACE 0
@@ -32,7 +30,10 @@ namespace {
     const string UNKNOWN_COMMAND = "error: unknown command\n";
     const string COMMAND_SUCCESS = "OK\n";
     const string BAD_REQUEST = "400 Bad Request";
+    const string ADAPTATION_OPTIONS_PATH = "specification/adaptation_options.json";
     const string MONITOR_SCHEMA_PATH = "specification/monitor_schema.json";
+    const string EXECUTE_SCHEMA_PATH = "specification/execute_schema.json";
+    const string ADAPTATION_OPTIONS_SCHEMA_PATH = "specification/adaptation_options_schema.json";
     const string UNKNOWN_ENDPOINT = "404 Not Found";
     const string METHOD_UNALLOW =  "405 Method Not Allowed";
     const string HTTP_OK = "200 OK";
@@ -81,7 +82,6 @@ HTTPInterface::~HTTPInterface() {
 
 void HTTPInterface::initialize()
 {
-    std::cout << "something from inside here!" << std::endl;
     rtEvent = new cMessage("rtEvent");
     rtScheduler = check_and_cast<cSocketRTScheduler *>(getSimulation()->getScheduler());
     rtScheduler->setInterfaceModule(this, rtEvent, recvBuffer, BUFFER_SIZE, &numRecvBytes);
@@ -192,8 +192,6 @@ void HTTPInterface::updateMonitoring(){
     opt_rt = pProbe->getOptResponseTime();
     arrival_rate = pProbe->getArrivalRate();
     utilization = HTTPInterface::allUtilization();
-
-    //monitor_mapping["utilization"] = std::bind(&HTTPInterface::addUtilization, this, std::placeholders::_1);
 }
 
 boost::property_tree::ptree HTTPInterface::allUtilization() {
@@ -243,18 +241,18 @@ bool HTTPInterface::epMonitorSchema(const std::string& arg){
 
 }
 bool HTTPInterface::epExecuteSchema(const std::string& arg){
-    boost::property_tree::read_json("specification/execute_schema.json", response_json);
+    boost::property_tree::read_json(EXECUTE_SCHEMA_PATH, response_json);
 
     return true;
 
 }
 bool HTTPInterface::epAdapOptions(const std::string& arg){
-    boost::property_tree::read_json("specification/adaptation_options.json", response_json);
+    boost::property_tree::read_json(ADAPTATION_OPTIONS_PATH, response_json);
     return true;
 }
 bool HTTPInterface::epAdapOptSchema(const std::string& arg)
 {
-    boost::property_tree::read_json("specification/adaptation_options_schema.json", response_json);
+    boost::property_tree::read_json(ADAPTATION_OPTIONS_SCHEMA_PATH, response_json);
     return true;
 }
 
@@ -308,8 +306,6 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
         val = pModel->getServers();
         max = pModel->getMaxServers();
         diff = std::abs(arg_int - val);
-
-        std::cout << "got here " << val << " " << max << " " <<  diff <<  " " << std::endl;
 
         if (arg_int > max) {
             return "error: max servers exceeded";

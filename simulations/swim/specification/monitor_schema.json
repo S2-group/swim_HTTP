@@ -1,47 +1,38 @@
 {
-    "dimmer": {
-        "descriptions": "Proportion of requests served with optional content.",
-        "type": "number",
-        "format": "float"
+    "dimmer_factor": {
+        "description": "Proportion of requests served with optional content.",
+        "type": "number"
     },
      "servers": {
         "description": "The number of servers.",
-        "type": "number",
-        "format": "integer"
+        "type": "integer"
     },
      "active_servers": {
         "description": "The number of active servers.",
-        "type": "number",
-        "format": "integer"
+        "type": "integer"
     },
      "utilization": {
         "description": "The server utilization.",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     },
      "basic_rt": {
         "description": "The response time of requests served without optional content.",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     },
      "basic_throughput": {
         "description": "The throughput of requests served without optional content.",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     },
      "opt_rt": {
         "description": "The response time of requests served with optional content.",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     },
      "opt_throughput": {
         "description": "The throughput of requests served with optional content.",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     },
      "arrival_rate": {
         "description": "The number of requests per second received by the web application.",
-        "type": "number",
-        "format": "integer"
-    }
+        "type": "integer"
+     }
 }

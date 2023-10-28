@@ -1,12 +1,10 @@
 {
     "server_number": {
-        "descriptions": "Sets the number of servers.",
-        "type": "number",
-        "format": "integer"
+        "description": "Sets the number of servers.",
+        "type": "integer"
     },
      "dimmer_factor": {
         "description": "Set the proportion of requests served with optional content (number between 0 and 1).",
-        "type": "number",
-        "format": "float"
+        "type": "number"
     }
 }
