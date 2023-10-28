@@ -48,7 +48,8 @@ protected:
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
     virtual bool parseMessage();
-    virtual void sendResponse(const std::string& status_code, const std::string& response_body);
+    virtual void sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file);
+    virtual void sendHTMLResponse(const std::string& status_code, const std::string& response_body);
     virtual void updateMonitoring();
     virtual std::string cmdSetServers(const std::string& arg);
     virtual std::string cmdSetDimmer(const std::string& arg);
@@ -58,7 +59,7 @@ protected:
     template <class T>
     void putInJSON(boost::property_tree::ptree& json_file, std::map<std::string, T*>& some_map);
 
-
+    virtual bool epIndex(const std::string& arg);
     virtual bool epMonitor(const std::string& arg);
     virtual bool epMonitorSchema(const std::string& arg);
     virtual bool epExecuteSchema(const std::string& arg);
@@ -93,7 +94,8 @@ private:
 
     char recvBuffer[BUFFER_SIZE];
     int numRecvBytes;
-
+    bool json_response = false;
+    bool html_response = false;
 
     std::vector<int*> variableVector = {&servers, &max_servers, &active_servers};
 
