@@ -18,8 +18,19 @@
       "type": "integer"
     },
     "utilization": {
-      "description": "The server utilization.",
-      "type": "number"
+      "description": "The servers' utilization.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "server_name":{
+            "type": "string"
+          },
+          "utilization_value": {
+            "type": "number"
+          }
+        }
+      }
     },
     "basic_rt": {
       "description": "The response time of requests served without optional content.",
