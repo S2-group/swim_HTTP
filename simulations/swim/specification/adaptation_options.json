@@ -3,7 +3,7 @@
     "values":[1, 2, 3],
     "domain": "discrete"
   },
-  "dimmer_ratio": {
+  "dimmer_factor": {
     "start": 0.0,
     "stop": 1.0,
     "domain": "continuous"
