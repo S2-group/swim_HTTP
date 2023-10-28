@@ -11,6 +11,10 @@
         "description": "The number of active servers.",
         "type": "integer"
     },
+     "max_servers": {
+        "description": "The maximum number of servers.",
+        "type": "integer"
+    },
      "utilization": {
         "description": "The server utilization.",
         "type": "number"
