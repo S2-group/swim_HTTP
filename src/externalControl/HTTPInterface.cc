@@ -141,6 +141,9 @@ void HTTPInterface::sendResponse(const std::string& status_code, const std::stri
 
 }
 void HTTPInterface::handleMessage(cMessage *msg) {
+
+    response_json = boost::property_tree::ptree()
+
     if (msg != rtEvent) {
         // Handle the message only if it's the expected event
         return;
