@@ -50,7 +50,7 @@
     },
     "arrival_rate": {
       "description": "The number of requests per second received by the web application.",
-      "type": "integer"
+      "type": "number"
     }
   }
 }
