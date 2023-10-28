@@ -1,29 +1,32 @@
 {
-  "server_number": {
-    "type": "object",
-    "properties": {
-      "values": {
-        "type": "array",
-        "items": {
-          "type": "integer"
+  "type": "object",
+  "properties": {
+    "server_number": {
+      "type": "object",
+      "properties": {
+        "values": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "domain": {
+          "type": "string"
         }
-      },
-      "domain": {
-        "type": "string"
       }
-    }
-  },
-  "dimmer_factor": {
-    "type": "object",
-    "properties": {
-      "start": {
-        "type": "number"
-      },
-      "stop": {
-        "type": "number"
-      },
-      "domain": {
-        "type": "string"
+    },
+    "dimmer_factor": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "number"
+        },
+        "stop": {
+          "type": "number"
+        },
+        "domain": {
+          "type": "string"
+        }
       }
     }
   }
