@@ -34,12 +34,14 @@ namespace {
     const string MONITOR_SCHEMA_PATH = "specification/monitor_schema.json";
     const string EXECUTE_SCHEMA_PATH = "specification/execute_schema.json";
     const string ADAPTATION_OPTIONS_SCHEMA_PATH = "specification/adaptation_options_schema.json";
+    const string API_INDEX_PATH = "specification/openapi_spec.html";
     const string UNKNOWN_ENDPOINT = "404 Not Found";
     const string METHOD_UNALLOW =  "405 Method Not Allowed";
     const string HTTP_OK = "200 OK";
+
 }
 
-std::string removeQuotesAroundNumbers(boost::property_tree::ptree& json_file) {
+std::string removeQuotesAroundNumbers(const boost::property_tree::ptree& json_file) {
     std::ostringstream oss;
     boost::property_tree::write_json(oss, json_file);
     std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
@@ -49,6 +51,7 @@ std::string removeQuotesAroundNumbers(boost::property_tree::ptree& json_file) {
 
 HTTPInterface::HTTPInterface() {
     // GET Requests
+    endpointGETHandlers["/"] = std::bind(&HTTPInterface::epIndex, this, std::placeholders::_1);
     endpointGETHandlers["/monitor"] = std::bind(&HTTPInterface::epMonitor, this, std::placeholders::_1);
     endpointGETHandlers["/monitor_schema"] = std::bind(&HTTPInterface::epMonitorSchema, this, std::placeholders::_1);
     endpointGETHandlers["/execute_schema"] = std::bind(&HTTPInterface::epExecuteSchema, this, std::placeholders::_1);
@@ -127,22 +130,36 @@ bool HTTPInterface::parseMessage() {
 
 }
 
-void HTTPInterface::sendResponse(const std::string& status_code, const std::string& response_body) {
+void HTTPInterface::sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file) {
+    std::string json_response_body = removeQuotesAroundNumbers(json_file);
+
     std::string http_response =
         "HTTP/1.1 " + status_code + "\r\n"
         "Content-Type: application/json\r\n"
-        "Content-Length: " + std::to_string(response_body.length()) + "\r\n"
+        "Content-Length: " + std::to_string(json_response_body.length()) + "\r\n"
         "Accept-Ranges: bytes\r\n"
         "Connection: close\r\n"
-        "\r\n" + response_body;
+        "\r\n" + json_response_body;
 
     rtScheduler->sendBytes(http_response.c_str(), http_response.length());
-
-
 }
+
+void HTTPInterface::sendHTMLResponse(const std::string& status_code, const std::string& http_response_body) {
+    std::string http_response =
+        "HTTP/1.1 " + status_code + "\r\n"
+        "Content-Type: text/html\r\n"
+        "Content-Length: " + std::to_string(http_response_body.length()) + "\r\n"
+        "Accept-Ranges: bytes\r\n"
+        "Connection: close\r\n"
+        "\r\n" + http_response_body;
+
+    rtScheduler->sendBytes(http_response.c_str(), http_response.length());
+}
+
 void HTTPInterface::handleMessage(cMessage *msg) {
 
     response_json = boost::property_tree::ptree();
+    response_body = "";
 
     if (msg != rtEvent) {
         // Handle the message only if it's the expected event
@@ -153,7 +170,7 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
     if(!valid_message)
     {
-        HTTPInterface::sendResponse(BAD_REQUEST,"");
+        HTTPInterface::sendHTMLResponse(BAD_REQUEST,"");
         return;
     }
     std::map<std::string, std::map<std::string, std::function<bool(const std::string&)>>>::iterator method_it;
@@ -161,16 +178,18 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
     if (method_it == HTTPAPI.end())
     {
-        HTTPInterface::sendResponse(METHOD_UNALLOW,"");
+        std::cout << "Disallowed method requested: " << http_rq_type << std::endl;
+        HTTPInterface::sendHTMLResponse(METHOD_UNALLOW,"");
         return;
     }
 
     std::map<std::string, std::function<bool(const std::string&)>>::iterator endpoint_it;
-    HTTPAPI[http_rq_type].find(http_rq_endpoint);
+    endpoint_it = HTTPAPI[http_rq_type].find(http_rq_endpoint);
 
     if (endpoint_it == HTTPAPI[http_rq_type].end())
     {
-        HTTPInterface::sendResponse(UNKNOWN_ENDPOINT,"");
+        std::cout << "Unknown endpoint requested: " << http_rq_endpoint << std::endl;
+        HTTPInterface::sendHTMLResponse(UNKNOWN_ENDPOINT,"");
         return;
     }
 
@@ -178,10 +197,11 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
 
     if(isSuccess){
-        response_body = removeQuotesAroundNumbers(response_json);
-
-        HTTPInterface::sendResponse(HTTP_OK,response_body);
+        if(json_response){ HTTPInterface::sendJSONResponse(HTTP_OK,response_json); }
+        else if(html_response) {HTTPInterface::sendHTMLResponse(HTTP_OK,response_body); }
     }
+    json_response = false;
+    html_response = false;
 }
 
 void HTTPInterface::updateMonitoring(){
@@ -227,6 +247,25 @@ void HTTPInterface::putInJSON (boost::property_tree::ptree& json_file, std::map<
     }
 }
 
+
+bool HTTPInterface::epIndex(const std::string& arg){
+    std::ifstream http_file (API_INDEX_PATH);
+    std::stringstream buffer;
+    if(http_file.is_open()){
+        buffer << http_file.rdbuf();
+    }
+    else{
+        std::cout << "file opening went wrong" << std::endl;
+        //TODO: Add some meaningful response in this case..
+        return false; //not sure when this would happen but OK
+    }
+    response_body = buffer.str();
+
+
+    html_response = true;
+    return true;
+}
+
 bool HTTPInterface::epMonitor(const std::string& arg){
     HTTPInterface::updateMonitoring();
 
@@ -234,28 +273,32 @@ bool HTTPInterface::epMonitor(const std::string& arg){
     HTTPInterface::putInJSON<double>(response_json, doubleMonitorable);
 
     response_json.put_child("utilization", utilization);
+    json_response = true;
 
     return true;
 }
+
 bool HTTPInterface::epMonitorSchema(const std::string& arg){
     boost::property_tree::read_json(MONITOR_SCHEMA_PATH, response_json);
-
+    json_response = true;
     return true;
 
 }
 bool HTTPInterface::epExecuteSchema(const std::string& arg){
     boost::property_tree::read_json(EXECUTE_SCHEMA_PATH, response_json);
-
+    json_response = true;
     return true;
 
 }
 bool HTTPInterface::epAdapOptions(const std::string& arg){
     boost::property_tree::read_json(ADAPTATION_OPTIONS_PATH, response_json);
+    json_response = true;
     return true;
 }
 bool HTTPInterface::epAdapOptSchema(const std::string& arg)
 {
     boost::property_tree::read_json(ADAPTATION_OPTIONS_SCHEMA_PATH, response_json);
+    json_response = true;
     return true;
 }
 
@@ -276,7 +319,7 @@ bool HTTPInterface::epExecute(const std::string& arg){
         if (servers_now != servers_request) {
             server_request_status = HTTPInterface::cmdSetServers(servers_request);
         } else {
-            server_request_status = "Number of servers already satisfied";
+            server_request_status= "Number of servers already satisfied";
         }
 
         if (dimmer_now != dimmer_request) {
@@ -289,12 +332,11 @@ bool HTTPInterface::epExecute(const std::string& arg){
         response_json.put("dimmer_factor", dimmer_request_status);
     } catch (boost::property_tree::ptree_bad_path& e) {
         response_json.put("error", std::string("Missing key in request: ") + e.what());
-        response_body = removeQuotesAroundNumbers(response_json);
-        HTTPInterface::sendResponse(BAD_REQUEST,response_body);
+        HTTPInterface::sendJSONResponse(BAD_REQUEST,response_json);
 
         return false;
     }
-
+    json_response = true;
     return true;
 
 }
