@@ -5,8 +5,6 @@ info:
     This is the specification of the HTTP interface of SWIM. 
     To be used as an example in the FAS course of the VU (2023-2024).
   version: "1.0"
-  contact:
-    email: e.g.alberts@vu.nl, j.g.leest@vu.nl, i.g.gerostathopoulos@vu.nl
 externalDocs:
   description: SWIM (+HTTP interface) repo
   url: https://github.com/S2-group/swim_HTTP
