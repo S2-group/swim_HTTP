@@ -24,7 +24,9 @@
 #include <map>
 #include "model/Model.h"
 #include "managers/monitor/IProbe.h"
-
+#include <boost/tokenizer.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 /**
  * Adaptation interface (probes and effectors)
  */
@@ -35,41 +37,70 @@ public:
     virtual ~HTTPInterface();
 
 protected:
-    std::map<std::string, std::function<void(boost::property_tree::ptree&)>> monitor_mapping;
+    std::map<std::string, int*> integerMonitorable;
+    std::map<std::string, double*> doubleMonitorable;
 
+    std::map<std::string, std::function<bool(const std::string&)>> endpointGETHandlers;
+    std::map<std::string, std::function<bool(const std::string&)>> endpointPUTHandlers;
+    std::map<std::string, std::map<std::string, std::function<bool(const std::string&)>> > HTTPAPI;
     Model* pModel;
     IProbe* pProbe;
 
     virtual void initialize();
     virtual void handleMessage(cMessage *msg);
-
+    virtual bool parseMessage();
+    virtual void sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file);
+    virtual void sendHTMLResponse(const std::string& status_code, const std::string& response_body);
+    virtual void updateMonitoring();
     virtual std::string cmdSetServers(const std::string& arg);
     virtual std::string cmdSetDimmer(const std::string& arg);
 
-    virtual std::string cmdGetDimmer(const std::string& arg);
-    virtual std::string cmdGetServers(const std::string& arg);
-    virtual std::string cmdGetMaxServers(const std::string& arg);
+    boost::property_tree::ptree allUtilization();
 
-    virtual void addDimmer(boost::property_tree::ptree& json);
-    virtual void addServers(boost::property_tree::ptree& json);
-    virtual void addActiveServers(boost::property_tree::ptree& json);
-    virtual void addMaxServers(boost::property_tree::ptree& json);
-    virtual void addUtilization(boost::property_tree::ptree& json);
-    virtual void addBasicResponseTime(boost::property_tree::ptree& json);
-    virtual void addBasicThroughput(boost::property_tree::ptree& json);
-    virtual void addOptResponseTime(boost::property_tree::ptree& json);
-    virtual void addOptThroughput(boost::property_tree::ptree& json);
-    virtual void addArrivalRate(boost::property_tree::ptree& json);
+    template <class T>
+    void putInJSON(boost::property_tree::ptree& json_file, std::map<std::string, T*>& some_map);
+
+    virtual bool epIndex(const std::string& arg);
+    virtual bool epMonitor(const std::string& arg);
+    virtual bool epMonitorSchema(const std::string& arg);
+    virtual bool epExecuteSchema(const std::string& arg);
+    virtual bool epAdapOptions(const std::string& arg);
+    virtual bool epAdapOptSchema(const std::string& arg);
+    virtual bool epExecute(const std::string& arg);
 
 private:
     static const unsigned BUFFER_SIZE = 4000;
     cMessage *rtEvent;
     cSocketRTScheduler *rtScheduler;
 
+    std::string http_rq_type;
+    std::string http_rq_body;
+    std::string http_rq_endpoint;
+    std::vector<std::string> lines;
+    std::string response_body;
+    std::string status_code;
+    boost::property_tree::ptree response_json;
+
+    double dimmer_factor;
+    int servers;
+    int active_servers;
+    double basic_rt;
+    int max_servers;
+    double basic_throughput;
+    double opt_throughput;
+    double opt_rt;
+    double arrival_rate;
+    boost::property_tree::ptree utilization;
+
     char recvBuffer[BUFFER_SIZE];
     int numRecvBytes;
+    bool json_response = false;
+    bool html_response = false;
 
-    std::vector<std::string> monitor = {
+    std::vector<int*> variableVector = {&servers, &max_servers, &active_servers};
+
+
+    std::vector<std::string> monitorable_list = {
       "dimmer",
       "servers",
       "active_servers",

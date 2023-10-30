@@ -10,7 +10,7 @@
             "type": "integer"
           }
         },
-        "type": {
+        "domain": {
           "type": "string"
         }
       }
@@ -24,7 +24,7 @@
         "stop": {
           "type": "number"
         },
-        "type": {
+        "domain": {
           "type": "string"
         }
       }

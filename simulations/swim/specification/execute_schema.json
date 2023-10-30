@@ -2,7 +2,7 @@
   "type": "object",
   "properties": {
     "server_number": {
-      "descriptions": "Sets the number of servers.",
+      "description": "Sets the number of servers.",
       "type": "integer"
     },
     "dimmer_factor": {

@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: SWIM HTTP interface
+  description: >-
+    This is the specification of the HTTP interface of SWIM. 
+    To be used as an example in the FAS course of the VU (2023-2024).
+  version: "1.0"
+externalDocs:
+  description: SWIM (+HTTP interface) repo
+  url: https://github.com/S2-group/swim_HTTP
+tags:
+  - name: adaptation_options
+    description: Get adaptation options
+  - name: monitor
+    description: Get data
+  - name: execute
+    description: Request a runtime adaptation
+  - name: adaptation_options_schema
+    description: Request the schemar of adaptation_options
+  - name: monitor_schema
+    description: Request the schema of monitoring
+  - name: execute_schema
+    description: Request the schema of execution
+paths:
+  /adaptation_options:
+    get:
+      tags:
+        - adaptation_options
+      summary: Get adaptation options from exemplar
+      description: >-
+        Used at the beginning of an exemplar run or whenever the adaptations
+        options are changed during a run of the exemplar
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdaptationOptions'
+        '400':
+          description: Invalid status value
+  /monitor:
+    get:
+      tags:
+        - monitor
+      summary: Get data from exemplar
+      description: Used for runtime monitoring
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Monitor'
+        '400':
+          description: Invalid status value
+  /execute:
+    put:
+      tags:
+        - execute
+      summary: Enact a change
+      description: Used to adapt the exemplar at runtime
+      responses:
+        '200':
+          description: Successful operation
+        '405':
+          description: Invalid input
+      requestBody:
+        description: Apply an adaptation
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Execution'
+  /adaptation_options_schema:
+    get:
+      tags:
+        - adaptation_options_schema
+      summary: Get the adaptation options schema
+      description: Get the scheme of the adaptation options
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid status value
+  /monitor_schema:
+    get:
+      tags:
+        - monitor_schema
+      summary: Get the monitor schema
+      description: Get the scheme of the monitored data
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid status value
+  /execute_schema:
+    get:
+      tags:
+        - execute_schema
+      summary: Get the execute schema
+      description: Get the scheme of the execute data
+      responses:
+        '200':
+          description: successful operation
+        '400':
+          description: Invalid status value
+components:
+  schemas:
+    AdaptationOptions:
+      type: object
+      properties:
+        server_number:
+          type: object
+          properties:
+            values:
+              type: array
+              items:
+                type: integer
+            domain:
+              type: string
+              enum:
+                - discrete
+                - continuous
+        dimmer_factor:
+          type: object
+          properties:
+            start:
+              type: number
+            stop:
+              type: number
+            domain:
+              type: string
+              enum:
+                - discrete
+                - continuous
+    Monitor:
+      type: object
+      properties:
+        dimmer_factor:
+          description: Proportion of requests served with optional content.
+          type: number
+        servers:
+          description: The number of servers.
+          type: integer
+        active_servers:
+          description: The number of active servers.
+          type: integer
+        max_servers:
+          description: The maximum number of servers.
+          type: integer
+        utilization:
+          description: The servers' utilization.
+          type: array
+          items:
+            type: object
+            properties:
+              server_name:
+                type: string
+              utilization_value:
+                type: number
+        basic_rt:
+          description: The response time of requests served without optional content.
+          type: number
+        basic_throughput:
+          description: The throughput of requests served without optional content.
+          type: number
+        opt_rt:
+          description: The response time of requests served with optional content.
+          type: number
+        opt_throughput:
+          description: The throughput of requests served with optional content.
+          type: number
+        arrival_rate:
+          description: The number of requests per second received by the web application.
+          type: integer
+    Execution:
+      type: object
+      properties:
+        server_number:
+          description: Sets the number of servers.
+          type: integer
+        dimmer_factor:
+          description: >-
+            Set the proportion of requests served with optional content (number
+            between 0 and 1).
+          type: number
