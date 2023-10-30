@@ -49,6 +49,11 @@ std::string removeQuotesAroundNumbers(const boost::property_tree::ptree& json_fi
     return std::regex_replace(oss.str(), regex, "$1");
 }
 
+std::string removeQuotesAroundNumbers(const std::string& input) {
+    std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
+    return std::regex_replace(input, regex, "$1");
+}
+
 HTTPInterface::HTTPInterface() {
     // GET Requests
     endpointGETHandlers["/"] = std::bind(&HTTPInterface::epIndex, this, std::placeholders::_1);
@@ -76,7 +81,6 @@ HTTPInterface::HTTPInterface() {
             {"opt_throughput", &opt_throughput},
             {"opt_rt", &opt_rt},
             {"arrival_rate", &arrival_rate}};
-
 }
 
 HTTPInterface::~HTTPInterface() {
@@ -113,13 +117,11 @@ bool HTTPInterface::parseMessage() {
     std::string line;
     while (std::getline(ss, line, '\n')) { lines.push_back(line); }
 
-
     http_rq_type = http_request[0];
     http_rq_endpoint = http_request[1];
 
     if(lines.size() > 0){
         http_rq_body = lines.back();
-
     }
     else {
         http_rq_body = "";
@@ -247,7 +249,6 @@ void HTTPInterface::putInJSON (boost::property_tree::ptree& json_file, std::map<
     }
 }
 
-
 bool HTTPInterface::epIndex(const std::string& arg){
     std::ifstream http_file (API_INDEX_PATH);
     std::stringstream buffer;
@@ -260,8 +261,6 @@ bool HTTPInterface::epIndex(const std::string& arg){
         return false; //not sure when this would happen but OK
     }
     response_body = buffer.str();
-
-
     html_response = true;
     return true;
 }
@@ -335,10 +334,10 @@ bool HTTPInterface::epExecute(const std::string& arg){
         HTTPInterface::sendJSONResponse(BAD_REQUEST,response_json);
 
         return false;
+
     }
     json_response = true;
     return true;
-
 }
 
 

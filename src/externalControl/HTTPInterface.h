@@ -19,6 +19,7 @@
 #include <omnetpp.h>
 #include <string>
 #include <vector>
+#include <boost/property_tree/ptree.hpp>
 #include <functional>
 #include <map>
 #include "model/Model.h"
@@ -67,7 +68,6 @@ protected:
     virtual bool epAdapOptSchema(const std::string& arg);
     virtual bool epExecute(const std::string& arg);
 
-
 private:
     static const unsigned BUFFER_SIZE = 4000;
     cMessage *rtEvent;
@@ -115,7 +115,7 @@ private:
 
     std::vector<std::string> adaptations = {
       "server_number",
-      "dimmer_number"
+      "dimmer_factor"
     };
 };
 
