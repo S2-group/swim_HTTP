@@ -1,5 +1,5 @@
-# SWIM - A Simulator of Web Infrastructure and Management
-SWIM is a self-adaptive exemplar that simulates a web application. SWIM can be used as a target system with an external adaptation manager interacting with it through its TCP-based interface or with an adaptation manager built as a simulation module.
+# SWIM HTTP - A Simulator of Web Infrastructure and Management now with HTTP!
+SWIM is a self-adaptive exemplar that simulates a web application. SWIM can be used as a target system with an external adaptation manager interacting with it through its TCP-based interface, **HTTP Interface** or with an adaptation manager built as a simulation module.
 
 ## Installation - Install Docker
 SWIM uses Docker containers to automate deployment of the simulation into a virtual container. Docker is available for free at http://docker.com. Docker must be installed in your environment. The community edition is sufficient for running SWIM, which can be downloaded from [here](https://www.docker.com/community-edition#/download). SWIM itself is hosted on Docker Hub.
@@ -7,13 +7,13 @@ SWIM uses Docker containers to automate deployment of the simulation into a virt
 ## Creating and connecting to a container
 As mentioned, SWIM is hosted on Docker Hub, and online repository for Docker containers. The first time docker is run, containers will be downloaded onto your host machine (multiple downloads will occur because containers are layered on each other, and SWIM is built on a number of Linux containers for windowing, simulation, etc.). This can be done with the following command run in a terminal or command prompt:
 ```
-   > docker run -d -p 5901:5901 -p 6901:6901 --name swim gabrielmoreno/swim
+   > docker run -d -p 5901:5901 -p 6901:6901 --name swim egalberts/swim:http
 ```
 
 The output will be something like this as it is downloading the Docker images.
 ```
-   Unable to find image 'gabrielmoreno/swim:1.0' locally
-   1.0: Pulling from gabrielmoreno/swim
+   Unable to find image 'egalberts/swim:http' locally
+   1.0: Pulling from egalberts/swim
    50aff78429b1: Pulling fs layer 
    f6d82e297bce: Pulling fs layer 
    275abb2c8a6f: Pulling fs layer 
@@ -28,7 +28,7 @@ The output will be something like this as it is downloading the Docker images.
    0b651a0d9a51: Pull complete 
    ...
    Digest: sha256:059cbcb47e4da4e1c1b081cb1634cd15fbf4b8789ef5af9f89b57b5c97f57182
-   Status: Downloaded newer image for gabrielmoreno/swim:1.0
+   Status: Downloaded newer image for egalberts/swim:http
 ```
 
 When all images have `Pull complete` and the final message is printed, the SWIM container is now installed on your system.
@@ -46,6 +46,7 @@ SWIM can be accessed in several modes:
 1. With an adaptation as a simulation module
 2. With the included external adaptation manager
 3. With another external adaptation manager that uses the TCP interface of SWIM
+4. With another external adaptation manager that uses the HTTP interface of SWIM
 
 ### How to run simulation with adaptation manager as a module:
 1. Start a Terminal Emulator from the `Applications` menu in the top-left corner. This opens a terminal within the container. 
@@ -106,8 +107,12 @@ This option uses the simple adaptation manager found in `swim/examples/simple_am
    ../swim/tools/plotResults.sh SWIM sim 1 plot.png
 ```
 
-### How to run simulation with another external adaptation manager:
-The same as above, except that the script `run.sh` has to be used instead. This script launches SWIM but not the external adaptation manager, which has to be launched independently.
+### How to run simulation with the TCP or HTTP Interface
+```
+   > cd ~/seams-swim/swim/simulations/swim/
+   > ./run.sh sim 1
+```
+Keep in mind that SWIM will await adaptations to be enacted through the endpoints it makes available, and will not adapt itself in this mode.
 
 ## Source code and OMNeT++ IDE
 The Docker container includes the OMNeT++ IDE with the source code for SWIM and the example adaptation managers included.
