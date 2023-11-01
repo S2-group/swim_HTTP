@@ -41,17 +41,12 @@ namespace {
 
 }
 
-std::string removeQuotesAroundNumbers(const boost::property_tree::ptree& json_file) {
+std::string serializeJSON(const boost::property_tree::ptree& json_file) {
     std::ostringstream oss;
     boost::property_tree::write_json(oss, json_file);
     std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
 
     return std::regex_replace(oss.str(), regex, "$1");
-}
-
-std::string removeQuotesAroundNumbers(const std::string& input) {
-    std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
-    return std::regex_replace(input, regex, "$1");
 }
 
 HTTPInterface::HTTPInterface() {
@@ -128,12 +123,10 @@ bool HTTPInterface::parseMessage() {
     }
 
     return true;
-
-
 }
 
 void HTTPInterface::sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file) {
-    std::string json_response_body = removeQuotesAroundNumbers(json_file);
+    std::string json_response_body = serializeJSON(json_file);
 
     std::string http_response =
         "HTTP/1.1 " + status_code + "\r\n"
@@ -287,13 +280,14 @@ bool HTTPInterface::epExecuteSchema(const std::string& arg){
     boost::property_tree::read_json(EXECUTE_SCHEMA_PATH, response_json);
     json_response = true;
     return true;
-
 }
+
 bool HTTPInterface::epAdapOptions(const std::string& arg){
     boost::property_tree::read_json(ADAPTATION_OPTIONS_PATH, response_json);
     json_response = true;
     return true;
 }
+
 bool HTTPInterface::epAdapOptSchema(const std::string& arg)
 {
     boost::property_tree::read_json(ADAPTATION_OPTIONS_SCHEMA_PATH, response_json);
