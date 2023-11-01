@@ -41,7 +41,7 @@ namespace {
 
 }
 
-std::string serializeJSON(const boost::property_tree::ptree& json_file) {
+std::string serializeJSON(const boost::property_tree::ptree& json_file){
     std::ostringstream oss;
     boost::property_tree::write_json(oss, json_file);
     std::regex regex(R"delim("(-?\d+(\.\d+)?)")delim"); // matches quoted numbers, including decimals
@@ -49,7 +49,7 @@ std::string serializeJSON(const boost::property_tree::ptree& json_file) {
     return std::regex_replace(oss.str(), regex, "$1");
 }
 
-HTTPInterface::HTTPInterface() {
+HTTPInterface::HTTPInterface(){
     // GET Requests
     endpointGETHandlers["/"] = std::bind(&HTTPInterface::epIndex, this, std::placeholders::_1);
     endpointGETHandlers["/monitor"] = std::bind(&HTTPInterface::epMonitor, this, std::placeholders::_1);
@@ -78,12 +78,11 @@ HTTPInterface::HTTPInterface() {
             {"arrival_rate", &arrival_rate}};
 }
 
-HTTPInterface::~HTTPInterface() {
+HTTPInterface::~HTTPInterface(){
     cancelAndDelete(rtEvent);
 }
 
-void HTTPInterface::initialize()
-{
+void HTTPInterface::initialize(){
     rtEvent = new cMessage("rtEvent");
     rtScheduler = check_and_cast<cSocketRTScheduler *>(getSimulation()->getScheduler());
     rtScheduler->setInterfaceModule(this, rtEvent, recvBuffer, BUFFER_SIZE, &numRecvBytes);
@@ -91,7 +90,7 @@ void HTTPInterface::initialize()
     pProbe = check_and_cast<IProbe*> (gate("probe")->getPreviousGate()->getOwnerModule());
 }
 
-bool HTTPInterface::parseMessage() {
+bool HTTPInterface::parseMessage(){
     // Get data from the buffer
     std::string input(recvBuffer, numRecvBytes);
     numRecvBytes = 0;
@@ -125,7 +124,7 @@ bool HTTPInterface::parseMessage() {
     return true;
 }
 
-void HTTPInterface::sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file) {
+void HTTPInterface::sendJSONResponse(const std::string& status_code, const boost::property_tree::ptree& json_file){
     std::string json_response_body = serializeJSON(json_file);
 
     std::string http_response =
@@ -139,7 +138,7 @@ void HTTPInterface::sendJSONResponse(const std::string& status_code, const boost
     rtScheduler->sendBytes(http_response.c_str(), http_response.length());
 }
 
-void HTTPInterface::sendHTMLResponse(const std::string& status_code, const std::string& http_response_body) {
+void HTTPInterface::sendHTMLResponse(const std::string& status_code, const std::string& http_response_body){
     std::string http_response =
         "HTTP/1.1 " + status_code + "\r\n"
         "Content-Type: text/html\r\n"
@@ -152,7 +151,6 @@ void HTTPInterface::sendHTMLResponse(const std::string& status_code, const std::
 }
 
 void HTTPInterface::handleMessage(cMessage *msg) {
-
     response_json = boost::property_tree::ptree();
     response_body = "";
 
@@ -163,16 +161,14 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
     bool valid_message = HTTPInterface::parseMessage();
 
-    if(!valid_message)
-    {
+    if(!valid_message){
         HTTPInterface::sendHTMLResponse(BAD_REQUEST,"");
         return;
     }
     std::map<std::string, std::map<std::string, std::function<bool(const std::string&)>>>::iterator method_it;
     method_it = HTTPAPI.find(http_rq_type);
 
-    if (method_it == HTTPAPI.end())
-    {
+    if (method_it == HTTPAPI.end()){
         std::cout << "Disallowed method requested: " << http_rq_type << std::endl;
         HTTPInterface::sendHTMLResponse(METHOD_UNALLOW,"");
         return;
@@ -181,8 +177,7 @@ void HTTPInterface::handleMessage(cMessage *msg) {
     std::map<std::string, std::function<bool(const std::string&)>>::iterator endpoint_it;
     endpoint_it = HTTPAPI[http_rq_type].find(http_rq_endpoint);
 
-    if (endpoint_it == HTTPAPI[http_rq_type].end())
-    {
+    if (endpoint_it == HTTPAPI[http_rq_type].end()){
         std::cout << "Unknown endpoint requested: " << http_rq_endpoint << std::endl;
         HTTPInterface::sendHTMLResponse(UNKNOWN_ENDPOINT,"");
         return;
@@ -190,11 +185,11 @@ void HTTPInterface::handleMessage(cMessage *msg) {
 
     bool isSuccess = HTTPAPI[http_rq_type][http_rq_endpoint](http_rq_body);
 
-
     if(isSuccess){
         if(json_response){ HTTPInterface::sendJSONResponse(HTTP_OK,response_json); }
         else if(html_response) {HTTPInterface::sendHTMLResponse(HTTP_OK,response_body); }
     }
+    
     json_response = false;
     html_response = false;
 }
@@ -212,7 +207,7 @@ void HTTPInterface::updateMonitoring(){
     utilization = HTTPInterface::allUtilization();
 }
 
-boost::property_tree::ptree HTTPInterface::allUtilization() {
+boost::property_tree::ptree HTTPInterface::allUtilization(){
     int max = pModel->getMaxServers();
     boost::property_tree::ptree server_array_ptree;
 
@@ -231,13 +226,13 @@ boost::property_tree::ptree HTTPInterface::allUtilization() {
         // Add each server ptree to the main ptree using push_back
         server_array_ptree.push_back(std::make_pair("", server));
     }
+    
     return server_array_ptree;
 }
 
 template <class T>
-void HTTPInterface::putInJSON (boost::property_tree::ptree& json_file, std::map<std::string, T*>& some_map) {
-    for (auto const& map_entry : some_map)
-    {
+void HTTPInterface::putInJSON (boost::property_tree::ptree& json_file, std::map<std::string, T*>& some_map){
+    for (auto const& map_entry : some_map){
         json_file.put(map_entry.first, *map_entry.second);
     }
 }
@@ -255,6 +250,7 @@ bool HTTPInterface::epIndex(const std::string& arg){
     }
     response_body = buffer.str();
     html_response = true;
+    
     return true;
 }
 
@@ -273,25 +269,28 @@ bool HTTPInterface::epMonitor(const std::string& arg){
 bool HTTPInterface::epMonitorSchema(const std::string& arg){
     boost::property_tree::read_json(MONITOR_SCHEMA_PATH, response_json);
     json_response = true;
+    
     return true;
-
 }
+
 bool HTTPInterface::epExecuteSchema(const std::string& arg){
     boost::property_tree::read_json(EXECUTE_SCHEMA_PATH, response_json);
     json_response = true;
+    
     return true;
 }
 
 bool HTTPInterface::epAdapOptions(const std::string& arg){
     boost::property_tree::read_json(ADAPTATION_OPTIONS_PATH, response_json);
     json_response = true;
+    
     return true;
 }
 
-bool HTTPInterface::epAdapOptSchema(const std::string& arg)
-{
+bool HTTPInterface::epAdapOptSchema(const std::string& arg){
     boost::property_tree::read_json(ADAPTATION_OPTIONS_SCHEMA_PATH, response_json);
     json_response = true;
+    
     return true;
 }
 
@@ -328,16 +327,16 @@ bool HTTPInterface::epExecute(const std::string& arg){
         HTTPInterface::sendJSONResponse(BAD_REQUEST,response_json);
 
         return false;
-
     }
+    
     json_response = true;
+    
     return true;
 }
 
-
-
-std::string HTTPInterface::cmdSetServers(const std::string& arg) {
+std::string HTTPInterface::cmdSetServers(const std::string& arg){
     ExecutionManagerModBase* pExecMgr = check_and_cast<ExecutionManagerModBase*> (getParentModule()->getSubmodule("executionManager"));
+    
     try {
         int arg_int, val, max, diff;
         arg_int = std::stoi(arg);
@@ -365,12 +364,10 @@ std::string HTTPInterface::cmdSetServers(const std::string& arg) {
     catch (const std::out_of_range& oor) {
         return "error: out of range";
     }
-
 }
 
-
-std::string HTTPInterface::cmdSetDimmer(const std::string& arg) {
-    if (arg == "") {
+std::string HTTPInterface::cmdSetDimmer(const std::string& arg){
+    if (arg == ""){
         return "\"error: missing dimmer argument\"";
     }
 
